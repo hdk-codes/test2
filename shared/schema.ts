@@ -12,7 +12,7 @@ export const insertGalleryItemSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   mediaUrl: z.string(),
-  thumbnailUrl: z.string().optional(),
+  thumbnailUrl: z.string().optional().nullable(),
   mediaType: mediaTypeSchema,
   tags: z.array(z.string()).optional().default([]),
   metadata: z.record(z.any()).optional().default({})

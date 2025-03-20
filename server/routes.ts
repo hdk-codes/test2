@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: req.body.title?.trim(),
         description: req.body.description?.trim(),
         mediaUrl: `/gallery_uploads/${req.file.filename}`,
-        thumbnailUrl: req.body.thumbnailUrl?.trim() || null,
+        thumbnailUrl: req.body.thumbnailUrl ? req.body.thumbnailUrl.trim() : null,
         mediaType: req.file.mimetype.startsWith('image') ? 'image' : 'video',
         tags,
         metadata
