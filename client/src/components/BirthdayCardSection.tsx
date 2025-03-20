@@ -338,7 +338,19 @@ function StarsBackground() {
   );
 }
 
-export default function BirthdayCardSection({ scrollProgress = 0 }) {
+interface BirthdayCardSectionProps {
+  scrollProgress?: number;
+  isActive?: boolean;
+  progress?: number;
+  onContinue?: () => void;
+}
+
+export default function BirthdayCardSection({ 
+  scrollProgress = 0,
+  isActive = false,
+  progress = 0,
+  onContinue
+}: BirthdayCardSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
   const parallaxRef = useRef<HTMLDivElement>(null);

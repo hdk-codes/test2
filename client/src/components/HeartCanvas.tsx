@@ -1,15 +1,43 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDeviceOrientation } from "@/hooks/use-device-orientation";
 
-export default function HeartCanvas() {
+interface HeartCanvasProps {
+  burstMoment?: boolean;
+}
+
+export default function HeartCanvas({ burstMoment = false }: HeartCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const heartRef = useRef<THREE.Mesh | null>(null);
+  const particlesRef = useRef<THREE.Points | null>(null);
+  const glowRef = useRef<THREE.Mesh | null>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
+  
   const { beta, gamma } = useDeviceOrientation();
   const [isInteracting, setIsInteracting] = useState(false);
-  const [isHeartVisible, setIsHeartVisible] = useState(false);
-  const [isHintVisible, setIsHintVisible] = useState(false);
+  const [showLoveMessage, setShowLoveMessage] = useState(false);
+  const [burstParticles, setBurstParticles] = useState<JSX.Element[]>([]);
   
+  // Function to trigger heart burst effect
+  const triggerHeartBurst = () => {
+    // Create explosion of particles
+    createBurstParticles();
+    
+    // Show message after a short delay
+    setTimeout(() => {
+      setShowLoveMessage(true);
+    }, 500);
+  };
+  
+  // Handle burst moment triggered from parent component
+  useEffect(() => {
+    if (burstMoment) {
+      triggerHeartBurst();
+    }
+  }, [burstMoment]);
+  
+  // Core 3D scene setup
   useEffect(() => {
     if (!containerRef.current) return;
     
@@ -19,15 +47,19 @@ export default function HeartCanvas() {
         heart: THREE.Mesh,
         particles: THREE.Points,
         glow: THREE.Mesh,
-        pointLight: THREE.PointLight;
+        pointLight: THREE.PointLight,
+        rimLight: THREE.SpotLight;
     
     let mouseX = 0, mouseY = 0;
     let targetX = 0, targetY = 0;
     let windowHalfX = window.innerWidth / 2;
     let windowHalfY = window.innerHeight / 2;
+    let sceneInitialized = false;
     
     // Initialize Three.js scene with enhanced settings
     function init() {
+      if (sceneInitialized) return;
+      
       // Scene setup with better rendering settings
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -43,44 +75,46 @@ export default function HeartCanvas() {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Better performance
       containerRef.current?.appendChild(renderer.domElement);
       
-      // Create heart shape with more detail
+      // Create heart shape with more detail and smoother curves
       const heartShape = new THREE.Shape();
       
       heartShape.moveTo(0, 0);
-      heartShape.bezierCurveTo(0, -1, -2, -2, -2, 0);
-      heartShape.bezierCurveTo(-2, 2, 0, 2, 0, 0);
-      heartShape.bezierCurveTo(0, -1, 2, -2, 2, 0);
-      heartShape.bezierCurveTo(2, 2, 0, 2, 0, 0);
+      heartShape.bezierCurveTo(0, -1, -2, -2.5, -2, 0);
+      heartShape.bezierCurveTo(-2, 2.5, 0, 2.5, 0, 0.5);
+      heartShape.bezierCurveTo(0, 2.5, 2, 2.5, 2, 0);
+      heartShape.bezierCurveTo(2, -2.5, 0, -1, 0, 0);
       
-      // Higher quality settings
+      // Higher quality settings for smoother heart shape
       const extrudeSettings = {
-        depth: 0.5,
+        depth: 0.6,
         bevelEnabled: true,
-        bevelSegments: 5,
-        steps: 3,
-        bevelSize: 0.1,
-        bevelThickness: 0.1,
-        curveSegments: 24
+        bevelSegments: 8,
+        steps: 4,
+        bevelSize: 0.2,
+        bevelThickness: 0.2,
+        curveSegments: 32
       };
       
       const geometry = new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
       
-      // Create more advanced material with fresnel effect
+      // Create more advanced material with fresnel effect for realistic shine
       const material = new THREE.MeshPhysicalMaterial({
         color: 0xff3366,
         roughness: 0.2,
-        metalness: 0.8,
+        metalness: 0.7,
         reflectivity: 0.9,
-        clearcoat: 0.5,
+        clearcoat: 0.8,
         clearcoatRoughness: 0.2,
         emissive: 0xff0066,
-        emissiveIntensity: 0.4
+        emissiveIntensity: 0.5,
+        envMapIntensity: 1.2
       });
       
       heart = new THREE.Mesh(geometry, material);
+      heartRef.current = heart;
       heart.rotation.x = Math.PI;
-      heart.scale.set(0.5, 0.5, 0.5);
-      heart.visible = false; // Hide initially
+      heart.scale.set(0.4, 0.4, 0.4); // Slightly smaller for better proportion
+      heart.position.set(0, 0, 0); // Center position
       scene.add(heart);
       
       // Add a glowing aura around the heart
@@ -88,43 +122,94 @@ export default function HeartCanvas() {
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: 0xff6b8b,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.2,
         blending: THREE.AdditiveBlending
       });
       glow = new THREE.Mesh(glowGeometry, glowMaterial);
-      glow.scale.set(1, 1, 0.5);
-      glow.visible = false;
+      glowRef.current = glow;
+      glow.scale.set(1, 1, 0.6);
+      glow.position.copy(heart.position);
       scene.add(glow);
       
-      // Create particle system for floating particles
-      const particlesCount = 150;
+      // Create ambient particle system that surrounds the heart
+      createHeartParticles(scene, particles);
+      
+      // Enhanced lighting system for better visual quality
+      // Main front light
+      const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      mainLight.position.set(1, 1, 2);
+      mainLight.lookAt(heart.position);
+      scene.add(mainLight);
+      
+      // Fill light from behind
+      const fillLight = new THREE.DirectionalLight(0xfff0f5, 0.8);
+      fillLight.position.set(-1, -1, -1);
+      fillLight.lookAt(heart.position);
+      scene.add(fillLight);
+      
+      // Ambient light for overall illumination
+      const ambientLight = new THREE.AmbientLight(0x332244, 0.5);
+      scene.add(ambientLight);
+      
+      // Add point light in the center of the heart for glow effect
+      pointLight = new THREE.PointLight(0xff3366, 2, 5);
+      pointLight.position.set(0, 0, 0.5);
+      heart.add(pointLight); // Attach to heart so it moves with it
+      
+      // Add rim light for dramatic edge highlighting
+      rimLight = new THREE.SpotLight(0xff9999, 2, 10, Math.PI / 4, 0.5, 1);
+      rimLight.position.set(0, 0, -3);
+      rimLight.lookAt(heart.position);
+      scene.add(rimLight);
+      
+      // Add event listeners
+      document.addEventListener('mousemove', onDocumentMouseMove);
+      document.addEventListener('touchmove', onDocumentTouchMove);
+      document.addEventListener('mousedown', onDocumentInteraction);
+      document.addEventListener('touchstart', onDocumentInteraction);
+      window.addEventListener('resize', onWindowResize);
+      
+      // Mark as initialized
+      sceneInitialized = true;
+      
+      // Initial render
+      animate();
+    }
+    
+    // Create particle system for the heart
+    function createHeartParticles(scene: THREE.Scene, particlesObj: THREE.Points) {
+      const particlesCount = 180;
       const particlesGeometry = new THREE.BufferGeometry();
       const particlePositions = new Float32Array(particlesCount * 3);
       const particleSizes = new Float32Array(particlesCount);
       const particleColors = new Float32Array(particlesCount * 3);
       
       for (let i = 0; i < particlesCount; i++) {
-        // Position particles in a heart-like shape
-        const theta = Math.random() * Math.PI * 2;
+        // Position particles in a heart-like shape using parametric equation
+        const t = Math.random() * Math.PI * 2;
+        const scale = 0.15; // Scale factor for heart size
         
-        // Use parametric heart shape equation
-        const scale = 0.1;
-        const t = theta;
+        // Heart parametric equation (more pronounced heart shape)
         const x = 16 * Math.pow(Math.sin(t), 3);
         const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-        const z = (Math.random() - 0.5) * 4;
+        
+        // Random position within the heart volume
+        const depth = 1.5; // Thickness of the particle field
+        const z = (Math.random() - 0.5) * depth;
         
         particlePositions[i * 3] = x * scale * (0.8 + Math.random() * 0.4);
         particlePositions[i * 3 + 1] = y * scale * (0.8 + Math.random() * 0.4);
         particlePositions[i * 3 + 2] = z;
         
-        // Random sizes
-        particleSizes[i] = Math.random() * 3 + 1;
+        // Random sizes with larger particles in the center
+        const sizeVariation = Math.max(0.5, 1 - Math.sqrt(x*x + y*y) / 20);
+        particleSizes[i] = (Math.random() * 2 + 1) * sizeVariation;
         
-        // Colors range from pink to white
+        // Colors range from pink to white with variation
+        const colorRatio = Math.random(); // 0-1 value for color interpolation
         const r = 1.0;  // Full red
-        const g = 0.3 + Math.random() * 0.7; // Varying green
-        const b = 0.5 + Math.random() * 0.5; // Varying blue
+        const g = 0.3 + colorRatio * 0.7; // 0.3-1.0
+        const b = 0.5 + colorRatio * 0.5; // 0.5-1.0
         
         particleColors[i * 3] = r;
         particleColors[i * 3 + 1] = g;
@@ -135,11 +220,12 @@ export default function HeartCanvas() {
       particlesGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
       particlesGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
       
-      // Create particle material with custom shaders
+      // Create advanced particle material with custom shaders
       const particleMaterial = new THREE.ShaderMaterial({
         uniforms: {
           color: { value: new THREE.Color(0xffffff) },
-          time: { value: 0 }
+          time: { value: 0 },
+          pointTexture: { value: createParticleTexture() }
         },
         vertexShader: `
           attribute float size;
@@ -147,30 +233,43 @@ export default function HeartCanvas() {
           varying vec3 vColor;
           uniform float time;
           
+          float cubicPulse(float c, float w, float x) {
+            x = abs(x - c);
+            if (x > w) return 0.0;
+            x /= w;
+            return 1.0 - x * x * (3.0 - 2.0 * x);
+          }
+          
           void main() {
             vColor = color;
             vec3 pos = position;
-            // Float the particles
-            pos.y += sin(time * 0.5 + pos.x * 3.0) * 0.1;
-            pos.x += cos(time * 0.3 + pos.y * 3.0) * 0.1;
+            
+            // Complex floating motion
+            float xFreq = pos.x * 2.0;
+            float yFreq = pos.y * 2.0;
+            float zFreq = pos.z * 3.0;
+            
+            pos.x += sin(time * 0.5 + yFreq) * 0.06;
+            pos.y += cos(time * 0.4 + xFreq) * 0.06;
+            pos.z += sin(time * 0.7 + zFreq) * 0.08;
+            
+            // Add pulsing effect
+            float pulse = 1.0 + 0.05 * sin(time * 2.0 + pos.x * pos.y);
             
             vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-            gl_PointSize = size * (30.0 / -mvPosition.z);
+            gl_PointSize = size * pulse * (30.0 / -mvPosition.z);
             gl_Position = projectionMatrix * mvPosition;
           }
         `,
         fragmentShader: `
           uniform vec3 color;
+          uniform sampler2D pointTexture;
           varying vec3 vColor;
           
           void main() {
-            float r = 0.0;
-            vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-            r = dot(cxy, cxy);
-            if (r > 1.0) {
-                discard;
-            }
-            gl_FragColor = vec4(vColor, 1.0) * (1.0 - r);
+            vec4 texColor = texture2D(pointTexture, gl_PointCoord);
+            if (texColor.a < 0.3) discard;
+            gl_FragColor = vec4(vColor, 1.0) * texColor;
           }
         `,
         blending: THREE.AdditiveBlending,
@@ -179,44 +278,32 @@ export default function HeartCanvas() {
       });
       
       particles = new THREE.Points(particlesGeometry, particleMaterial);
-      particles.visible = false;
+      particlesRef.current = particles;
       scene.add(particles);
+    }
+    
+    // Create a nice soft particle texture
+    function createParticleTexture(): THREE.Texture {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
       
-      // Enhanced lighting system
-      const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
-      light1.position.set(1, 1, 1);
-      scene.add(light1);
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not get canvas context');
       
-      const light2 = new THREE.DirectionalLight(0xffffff, 0.8);
-      light2.position.set(-1, -1, 1);
-      scene.add(light2);
+      // Create a radial gradient for a soft particle
+      const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+      gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.4)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
       
-      const ambientLight = new THREE.AmbientLight(0x404040, 0.7);
-      scene.add(ambientLight);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 32, 32);
       
-      // Add point light in the center of the heart for glow effect
-      pointLight = new THREE.PointLight(0xff3366, 1.5, 5);
-      pointLight.position.set(0, 0, 1);
-      scene.add(pointLight);
-      
-      // Add event listeners
-      document.addEventListener('mousemove', onDocumentMouseMove);
-      document.addEventListener('touchmove', onDocumentTouchMove);
-      document.addEventListener('mousedown', onDocumentInteraction);
-      document.addEventListener('touchstart', onDocumentInteraction);
-      window.addEventListener('resize', onWindowResize);
-      window.addEventListener('scroll', checkVisibility);
-      
-      // Show hint after a delay
-      setTimeout(() => {
-        setIsHintVisible(true);
-      }, 3000);
-      
-      // Check initial visibility
-      checkVisibility();
-      
-      // Initial render
-      animate();
+      const texture = new THREE.Texture(canvas);
+      texture.needsUpdate = true;
+      return texture;
     }
     
     function onWindowResize() {
@@ -234,6 +321,7 @@ export default function HeartCanvas() {
     
     function onDocumentTouchMove(event: TouchEvent) {
       if (event.touches.length === 1) {
+        // Prevent default only if the heart is the main interactive element
         event.preventDefault();
         mouseX = (event.touches[0].pageX - windowHalfX) / 50;
         mouseY = (event.touches[0].pageY - windowHalfY) / 50;
@@ -241,99 +329,191 @@ export default function HeartCanvas() {
     }
     
     function onDocumentInteraction() {
-      if (isHeartVisible) {
-        setIsInteracting(true);
-        
-        // Play heart beat sound
-        try {
-          const audio = new Audio();
-          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwMD4+Pj4+PkxMTExMTFpaWlpaWmhoaGhoaHZ2dnZ2doSEhISEhJKSkpKSkqCgoKCgoK6urq6urrKysr6+vr6+vr6+vr6+vsbGxsbGxtLS0tLS0tra2tra2uLi4uLi4urq6urq6vLy8vLy8vr6+vr6+v///wAAADxhdmMxOUQMUAAAAwAAAAAAATwwWkAAAAAAAAAAAAAAAAAAAAAAACIiIiIiIhE+PT09PTWmpqampppaXl5eXl48XDz///9MfT///zE+Pj4+PiIiIiIiIgAAAAAAAAAAAAD/+0LEcQAMKABnmDAAAYQACPMAAAAAKgjAo9CCNCCCRgg8IBTMfC3R5ipiRCAuOCCB0zN0vBeeMEcJQQIEAweCAIGDx9ZC8Kj+BTM7P6Orj+fPfMfT889M4/5Ppp/w0/PvQ/TPO/4hP8Mz8o/n/D03//w3/mc+fmf//M5/nO+fhF/i2t/yfM5/wyf/8p////yX////uQAGP//MZ///If///8jK//in////xE///yL///8JCaAkDkMf/yZv/+ZP//5kxm//Mv///yf///KCgIgU//pIKv/6k///+Sk///nCSzjDNCZkmfo5jLAilpESgkIjckdU+p3XkZCiMUlJDNHKlWsNS8JWQ6oCkqRLwWzSpIk4aii5CrVCfmMQFIIhQVSQ1KSZOTrJdpIJQcBihZDYgBEG4USHZN//////8wMDAxP//////8iBUVigoKsBAVFQoKCrAwVY2CxUFRVlRUVFWNgsVBUVZUVFRVjYQFRUFBVlRUVFWCBAWCAqKgoKsqKioqwQICgqCgqyoqKirBAVFQoKCrKioqKsbBYqCoqyoqKirGwWKgqKsqKioqxsICoqCgqyoqKirBAVFQoKCrKioqKsECAoKgoKsqKioqwQFRUKCgqyoqKirGwWKgqKsqKioqxsFioKirKioqKsEBUVCgoKsqKioqwQICgqCgqyoqKirBAgKCoKCrKioqKsEBUVCgoKsqKioqyZlVVVZlFVVZlIUUUUZlVVVZlVVVWZVVVVmVVVVmUUVVZlVVVWZVVVVmVVVVZlFVVWZVVVVmVVVVZlVVVWZRRVVmVVVVZlVVVWZVVVVmUUVVZlVVVWZVVVVmVVVVZlFFVWZVVVVmVVVV';
-          audio.volume = 0.2;
-          audio.play();
-        } catch (e) {
-          console.log('Audio not supported');
-        }
-        
-        // Reset after animation
-        setTimeout(() => {
-          setIsInteracting(false);
-        }, 1000);
+      setIsInteracting(true);
+      
+      // Play heart beat sound
+      try {
+        const audio = new Audio();
+        audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwMD4+Pj4+PkxMTExMTFpaWlpaWmhoaGhoaHZ2dnZ2doSEhISEhJKSkpKSkqCgoKCgoK6urq6urrKysr6+vr6+vr6+vr6+vsbGxsbGxtLS0tLS0tra2tra2uLi4uLi4urq6urq6vLy8vLy8vr6+vr6+v///wAAADxhdmMxOUQMUAAAAwAAAAAAATwwWkAAAAAAAAAAAAAAAAAAAAAAACIiIiIiIhE+PT09PTWmpqampppaXl5eXl48XDz///9MfT///zE+Pj4+PiIiIiIiIgAAAAAAAAAAAAD/+0LEcQAMKABnmDAAAYQACPMAAAAAKgjAo9CCNCCCRgg8IBTMfC3R5ipiRCAuOCCB0zN0vBeeMEcJQQIEAweCAIGDx9ZC8Kj+BTM7P6Orj+fPfMfT889M4/5Ppp/w0/PvQ/TPO/4hP8Mz8o/n/D03//w3/mc+fmf//M5/nO+fhF/i2t/yfM5/wyf/8p////yX////uQAGP//MZ///If///8jK//in////xE///yL///8JCaAkDkMf/yZv/+ZP//5kxm//Mv///yf///KCgIgU//pIKv/6k///+Sk///nCSzjDNCZkmfo5jLAilpESgkIjckdU+p3XkZCiMUlJDNHKlWsNS8JWQ6oCkqRLwWzSpIk4aii5CrVCfmMQFIIhQVSQ1KSZOTrJdpIJQcBihZDYgBEG4USHZN//////8wMDAxP//////8iBUVigoKsBAVFQoKCrAwVY2CxUFRVlRUVFWNgsVBUVZUVFRVjYQFRUFBVlRUVFWCBAWCAqKgoKsqKioqwQICgqCgqyoqKirBAVFQoKCrKioqKsbBYqCoqyoqKirGwWKgqKsqKioqxsICoqCgqyoqKirBAVFQoKCrKioqKsECAoKgoKsqKioqwQFRUKCgqyoqKirGwWKgqKsqKioqxsFioKirKioqKsEBUVCgoKsqKioqwQICgqCgqyoqKirBAgKCoKCrKioqKsEBUVCgoKsqKioqyZlVVVZlFVVZlIUUUUZlVVVZlVVVWZVVVVmVVVVmUUVVZlVVVWZVVVVmVVVVZlFVVWZVVVVmVVVVZlVVVWZRRVVmVVVVZlVVVWZVVVVmUUVVZlVVVWZVVVVmVVVVZlFFVWZVVVVmVVVV';
+        audio.volume = 0.3;
+        audio.play();
+      } catch (e) {
+        console.log('Audio not supported');
       }
+      
+      // Reset after animation
+      setTimeout(() => {
+        setIsInteracting(false);
+      }, 1000);
     }
     
-    function checkVisibility() {
-      // Make heart visible when final section is in view
-      const viewportTop = window.pageYOffset;
-      const viewportBottom = viewportTop + window.innerHeight;
-      const finalSection = document.getElementById('final-section');
+    function triggerHeartBurst() {
+      // This is called from the main function when burstMoment becomes true
+      // Create explosion of particles
+      createBurstParticles();
       
-      if (finalSection) {
-        const finalSectionTop = finalSection.offsetTop;
-        const inView = finalSectionTop <= viewportBottom && 
-                       finalSectionTop >= viewportTop - finalSection.offsetHeight;
+      // Show message after a short delay
+      setTimeout(() => {
+        setShowLoveMessage(true);
+      }, 500);
+      
+      // Create a pulse animation for the heart
+      if (heart) {
+        const burstAnimation = {
+          scale: [
+            new THREE.Vector3(0.4, 0.4, 0.4),
+            new THREE.Vector3(0.8, 0.8, 0.8),
+            new THREE.Vector3(0.4, 0.4, 0.4)
+          ],
+          color: [
+            new THREE.Color(0xff3366),
+            new THREE.Color(0xffffff),
+            new THREE.Color(0xff3366)
+          ],
+          emissiveIntensity: [0.5, 2, 0.5]
+        };
         
-        // Update visibility state
-        setIsHeartVisible(inView);
+        let startTime = Date.now();
+        const duration = 1200; // Animation duration in ms
         
-        if (heart) heart.visible = inView;
-        if (glow) glow.visible = inView;
-        if (particles) particles.visible = inView;
+        function animateBurst() {
+          const now = Date.now();
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Ease in-out function for smoother animation
+          const easedProgress = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          
+          if (progress < 1) {
+            // Animation still in progress
+            if (heart && heart.material instanceof THREE.MeshPhysicalMaterial) {
+              // Interpolate scale
+              const scaleIndex = Math.min(Math.floor(easedProgress * 2), 1);
+              const scaleT = (easedProgress * 2) - scaleIndex;
+              const scale1 = burstAnimation.scale[scaleIndex];
+              const scale2 = burstAnimation.scale[scaleIndex + 1];
+              const scale = scale1.clone().lerp(scale2, scaleT);
+              heart.scale.copy(scale);
+              
+              // Interpolate color
+              const colorIndex = Math.min(Math.floor(easedProgress * 2), 1);
+              const colorT = (easedProgress * 2) - colorIndex;
+              const color1 = burstAnimation.color[colorIndex];
+              const color2 = burstAnimation.color[colorIndex + 1];
+              const color = new THREE.Color().copy(color1).lerp(color2, colorT);
+              heart.material.color = color;
+              heart.material.emissive = color.clone().multiplyScalar(0.5);
+              
+              // Interpolate emissive intensity
+              const emissiveIndex = Math.min(Math.floor(easedProgress * 2), 1);
+              const emissiveT = (easedProgress * 2) - emissiveIndex;
+              const intensity1 = burstAnimation.emissiveIntensity[emissiveIndex];
+              const intensity2 = burstAnimation.emissiveIntensity[emissiveIndex + 1];
+              heart.material.emissiveIntensity = intensity1 + (intensity2 - intensity1) * emissiveT;
+            }
+            
+            // Update glow
+            if (glow) {
+              const glowScale = 1 + easedProgress * 2;
+              const glowOpacity = 0.2 + easedProgress * 0.4;
+              glow.scale.set(glowScale, glowScale, glowScale * 0.6);
+              if (glow.material instanceof THREE.MeshBasicMaterial) {
+                glow.material.opacity = glowOpacity * (1 - easedProgress);
+              }
+            }
+            
+            // Continue animation
+            requestAnimationFrame(animateBurst);
+          } else {
+            // Animation complete - reset to original state
+            if (heart && heart.material instanceof THREE.MeshPhysicalMaterial) {
+              heart.scale.set(0.4, 0.4, 0.4);
+              heart.material.color = new THREE.Color(0xff3366);
+              heart.material.emissive = new THREE.Color(0xff0066);
+              heart.material.emissiveIntensity = 0.5;
+            }
+            
+            // Reset glow
+            if (glow) {
+              glow.scale.set(1, 1, 0.6);
+              if (glow.material instanceof THREE.MeshBasicMaterial) {
+                glow.material.opacity = 0.2;
+              }
+            }
+          }
+        }
+        
+        // Start the animation
+        animateBurst();
       }
     }
     
     function updateHeart() {
       // Use device orientation on mobile devices
       if (gamma !== null && beta !== null) {
-        targetX = gamma / 10;
-        targetY = beta / 10;
+        targetX = gamma / 8; // More responsive to device tilting
+        targetY = beta / 8;
       } else {
         // Use mouse position on desktop
-        targetX = mouseX * 0.2;
-        targetY = mouseY * 0.2;
+        targetX = mouseX * 0.25;
+        targetY = mouseY * 0.25;
       }
       
-      if (heart && heart.visible) {
-        heart.rotation.y += 0.05 * (targetX - heart.rotation.y);
-        heart.rotation.x += 0.05 * (targetY + Math.PI - heart.rotation.x);
+      if (heart) {
+        // Smoother, more responsive heart rotation
+        const rotationSpeed = 0.08;
+        heart.rotation.y += rotationSpeed * (targetX - heart.rotation.y);
+        heart.rotation.x += rotationSpeed * (targetY + Math.PI - heart.rotation.x);
         
         // Subtle oscillation for breathing effect
-        const breathe = Math.sin(Date.now() * 0.001) * 0.03 + 1.0;
-        const baseScale = isInteracting ? 0.55 : 0.5;
+        const time = Date.now() * 0.001;
+        const breathe = Math.sin(time * 1.2) * 0.03 + 1.0;
+        const baseScale = isInteracting ? 0.45 : 0.4;
         heart.scale.set(
           baseScale * breathe,
           baseScale * breathe,
           baseScale * breathe
         );
         
-        // Update glow position
+        // Update glow position and effects
         if (glow) {
           glow.position.copy(heart.position);
           glow.rotation.copy(heart.rotation);
           
-          // Pulsating glow
-          const glowIntensity = isInteracting ? 0.3 : 0.15;
-          const glowPulse = Math.sin(Date.now() * 0.002) * 0.05 + glowIntensity;
-          glow.material.opacity = glowPulse;
+          // Pulsating glow with phase offset from heart
+          const glowIntensity = isInteracting ? 0.3 : 0.2;
+          const glowPulse = Math.sin(time * 1.2 + 0.5) * 0.08 + glowIntensity;
+          if (glow.material instanceof THREE.MeshBasicMaterial) {
+            glow.material.opacity = glowPulse;
+          }
           
-          // Glow scale
-          const glowScale = isInteracting ? 1.2 : 1;
-          glow.scale.set(glowScale, glowScale, 0.5);
+          // Glow scale changes with interaction
+          const glowScale = isInteracting ? 1.2 : 1 + Math.sin(time) * 0.05;
+          glow.scale.set(glowScale, glowScale, glowScale * 0.6);
         }
         
         // Update point light
         if (pointLight) {
-          const intensity = isInteracting ? 2.5 : 1.5;
-          pointLight.intensity = intensity + Math.sin(Date.now() * 0.003) * 0.3;
+          const intensity = isInteracting ? 3 : 2;
+          pointLight.intensity = intensity + Math.sin(time * 2) * 0.5;
+          
+          // Subtle color shift
+          const hue = 0.95 + Math.sin(time * 0.5) * 0.05; // Subtle shift between pink and red
+          pointLight.color.setHSL(hue, 1, 0.5);
         }
       }
       
       // Update particles
-      if (particles && particles.visible && particles.material instanceof THREE.ShaderMaterial) {
+      if (particles && particles.material instanceof THREE.ShaderMaterial) {
         particles.material.uniforms.time.value = Date.now() * 0.001;
+        
+        // Subtle rotation of the particle system
         particles.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
         
         // Scale particles during interaction
-        const particleScale = isInteracting ? 1.2 : 1.0;
+        const particleScale = isInteracting ? 1.1 : 1.0;
         particles.scale.set(particleScale, particleScale, particleScale);
       }
     }
@@ -347,19 +527,83 @@ export default function HeartCanvas() {
     // Initialize
     init();
     
+    // Respond to section changes
+    const handleSectionChange = (event: CustomEvent) => {
+      // Make the heart more prominent on specific sections
+      if (event.detail && event.detail.to !== undefined) {
+        // Adjust heart position/scale based on which section is active
+        const targetSection = event.detail.to;
+        
+        if (heart) {
+          if (targetSection === 0) {
+            // Landing section - heart is centered
+            gsapPositionHeart(heart, 0, 0, 0, 0.4);
+          } else if (targetSection === 1) {
+            // Birthday card section - heart moves slightly to the side
+            gsapPositionHeart(heart, -1.5, 0.5, 0, 0.35);
+          } else if (targetSection === 2) {
+            // Love letter section - heart moves to the other side
+            gsapPositionHeart(heart, 1.5, 0.5, 0, 0.35);
+          } else if (targetSection === 3) {
+            // Final section - heart returns to center and gets bigger
+            gsapPositionHeart(heart, 0, 0, 0, 0.45);
+          }
+        }
+      }
+    };
+    
+    // Helper function for smooth heart transitions
+    function gsapPositionHeart(heart: THREE.Mesh, x: number, y: number, z: number, scale: number) {
+      // Create a simple animation using requestAnimationFrame instead of GSAP
+      const startPos = heart.position.clone();
+      const startScale = heart.scale.x; // Assuming uniform scale
+      const duration = 1000; // ms
+      const startTime = Date.now();
+      
+      function animateHeart() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease in-out function
+        const eased = progress < 0.5 
+          ? 2 * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        
+        // Update position
+        heart.position.x = startPos.x + (x - startPos.x) * eased;
+        heart.position.y = startPos.y + (y - startPos.y) * eased;
+        heart.position.z = startPos.z + (z - startPos.z) * eased;
+        
+        // Update scale (uniform)
+        const newScale = startScale + (scale - startScale) * eased;
+        heart.scale.set(newScale, newScale, newScale);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animateHeart);
+        }
+      }
+      
+      animateHeart();
+    }
+    
+    // Listen for section changes
+    window.addEventListener('sectionchange', handleSectionChange as EventListener);
+    
     // Cleanup on unmount
     return () => {
       if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
         containerRef.current.removeChild(renderer.domElement);
       }
+      
+      // Remove all event listeners
       document.removeEventListener('mousemove', onDocumentMouseMove);
       document.removeEventListener('touchmove', onDocumentTouchMove);
       document.removeEventListener('mousedown', onDocumentInteraction);
       document.removeEventListener('touchstart', onDocumentInteraction);
       window.removeEventListener('resize', onWindowResize);
-      window.removeEventListener('scroll', checkVisibility);
+      window.removeEventListener('sectionchange', handleSectionChange as EventListener);
       
-      // Clean up any other THREE.js resources
+      // Clean up any THREE.js resources
       if (heart && heart.geometry) heart.geometry.dispose();
       if (heart && heart.material) {
         if (Array.isArray(heart.material)) {
@@ -378,31 +622,211 @@ export default function HeartCanvas() {
         }
       }
       
+      if (glow && glow.geometry) glow.geometry.dispose();
+      if (glow && glow.material) {
+        if (Array.isArray(glow.material)) {
+          glow.material.forEach(m => m.dispose());
+        } else {
+          glow.material.dispose();
+        }
+      }
+      
       renderer.dispose();
     };
-  }, [beta, gamma, isInteracting, isHeartVisible]);
+  }, [beta, gamma, isInteracting]);
+  
+  // Create burst particles effect
+  const createBurstParticles = () => {
+    const particleCount = 150;
+    const particles: JSX.Element[] = [];
+    
+    for (let i = 0; i < particleCount; i++) {
+      // Random position in a sphere around the center
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 100 + Math.random() * 200;
+      
+      // Transform coordinates
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const delay = Math.random() * 0.5;
+      const duration = 1.5 + Math.random();
+      const size = Math.random() * 6 + 2;
+      
+      // Randomly choose between hearts and star particles
+      const isHeart = Math.random() > 0.5;
+      const particleColor = isHeart 
+        ? `hsl(${350 + Math.random() * 20}, 100%, ${70 + Math.random() * 30}%)` 
+        : `hsl(${40 + Math.random() * 20}, 100%, ${80 + Math.random() * 20}%)`;
+      
+      const style: React.CSSProperties = {
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        width: `${size}px`,
+        height: `${size}px`,
+        transform: 'translate(-50%, -50%)',
+        animation: `burst-particle ${duration}s ease-out forwards`,
+        animationDelay: `${delay}s`,
+        opacity: 0,
+        color: particleColor,
+        willChange: 'transform, opacity',
+        zIndex: 1000
+      };
+      
+      particles.push(
+        <div
+          key={`burst-particle-${i}`}
+          className="burst-particle"
+          style={style}
+          data-x={x}
+          data-y={y}
+        >
+          {isHeart ? (
+            <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+            </svg>
+          )}
+        </div>
+      );
+    }
+    
+    // Add burst animation styles
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      @keyframes burst-particle {
+        0% { 
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(0);
+        }
+        10% { 
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        100% { 
+          opacity: 0;
+          transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(0.5) rotate(720deg);
+        }
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Set particles and clean up after animation
+    setBurstParticles(particles);
+    setTimeout(() => {
+      setBurstParticles([]);
+      document.head.removeChild(styleElement);
+    }, 3000);
+  };
+  
+  // Create the floating message that appears after heart burst
+  useEffect(() => {
+    if (!showLoveMessage || !messageRef.current) return;
+    
+    // Add sparkle effect to the message
+    const sparkleCount = 20;
+    const messageElement = messageRef.current;
+    
+    for (let i = 0; i < sparkleCount; i++) {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'sparkle';
+      
+      // Set random position around the message
+      const left = Math.random() * 100;
+      const top = Math.random() * 100;
+      
+      sparkle.style.cssText = `
+        position: absolute;
+        left: ${left}%;
+        top: ${top}%;
+        width: 5px;
+        height: 5px;
+        background: white;
+        border-radius: 50%;
+        opacity: 0;
+        animation: sparkle ${0.5 + Math.random() * 1.5}s ease-in-out infinite;
+        animation-delay: ${Math.random() * 2}s;
+      `;
+      
+      messageElement.appendChild(sparkle);
+    }
+    
+    // Add sparkle animation
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes sparkle {
+        0%, 100% { opacity: 0; transform: scale(0); }
+        50% { opacity: 0.8; transform: scale(1); }
+      }
+      
+      @keyframes float-message {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Play love confession sound
+    try {
+      const audio = new Audio();
+      audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAAACjCWU8IHgAqQ3C7DQYAAFYdnv/8bkPbr/2rY3ve3Xz/Pn+7/d3d77aed/d/t3/PD2f/t1f8gBQDAEhCQcF0HD+IMihQdCvv1K+FQ8IHEIUjTt+JQgZA0CgZFRzBD4P//qDoO/Lg8GA7Bvw///uoB/bLg2Dv/5cHQ7//5UJBUUfvl//nAThMHwZBn//+dBcRhQFAmAg///14QBkNBEJgb///nhAJB4UhQT///PBINiIZEwz//+gAgbE4uKiYS//+xEAYOjQwJCH//6WEwXFRMJA///zwmFhIXFBH//8MDYAQBocFBQR//qQoMioqIAr//8TEhIVERP//+vDAmKCQk///9kDIPCYoJv//5YXEw0JCr//6gLh4VFA7//9OCAaFRAP//+nCgiLCQi///2gUER/4cFBH///Og8JioqJiT//9YEAuIiYm///+iC4kKCQj///mBMTExMT///9qDB0FhAP//+xCgqKiYm///1QYHRUUEv//+wCQkKiIl///owoIiwkJP//+mCwiKCYm///rgkIiomJP//9kFRIVEhJ///sFhIVEhJ///nBYTFBIS///64MCYoKCL//9kD4iKigg///qAwIiooIf//8uCQiKiYk///1QOiooJiT//+0CgiKiYk///1QSERUSEn//7YLCQqJCT//+cFRMUEhL///qgwJigoIv//2QPiIqJCD//+oDAiKCgh///y4JCIqJCX//9UDoqJiQk///tAsIiokJP//5wVExQSEv///qgwJigo///9kD4iKiQg///qAwIigoIf//8uCQiKiQl///VA6KiYkJ///sAsIiokI///5wVExMSEn///agwNiggH///SggFhATDv//1wSDA0HgSD//9SDAMgYAAL//zQMAgCQQBP/+sP//GDHkR3VxMGAALAsB8IBEEgQCYJAWBgFg0BQLgUBoGAkCAIAYAwCAgCAFAIDAPAUC4MA4CQFAkBYGAKBYEgLAwBgKA0CQEgOAgCwHAYA4CgRAsCAGAMBQFgCMBYAgEAUBwFAYBYEgKAkCQGgMAwBwJAYBADAOAwBQGgUBYEgMAgCgFAQA4CAHAYBACgLAcAwBgCAQA4DgIAIAgCwLAgBQGgQAwCAIAUBQCgFAcBACAIAoCAGAQAwCgFAUBADAKA0CQFAWBIEgOAsCQNAuBADAKAwCQIAgCgGA8CQGgkBYEAaBQFgQM2T39ChMZI7k1TGQBBNpEd5xmZkNUKP//80BIIgQBAJA0CAfAgCRGCwJAsBwFAWA4CgHAkBoEAKA0CAEAQBgEAOAQCwIAQAwBAIAYBQDgMA0BwGAUBYDALAwCQJAuCgL//tQxMKPlsQh+n9+AAEUg7X/PnPPH//PD2eH//+fnPPP//P///////HHP/////5/////+f//////+f////////+c/9/n//////////5z///////////////////////n////+f////5//////znP//////////5/////8/////+f//////8/////////8/////8/////+f///////z///////z///////5////////nP/n////Oc////////nP///////8////////nP/////853/////+c/////+c/////+f/////////+c/+f///+f///////n///////n///////5////////n///////n/////+f///////n//////+f///////5///////5////////nP/////85////////nP/////853/////+c/////+c////////y/8///x//53/3//vn/f/+ed8////+f98/75//5/////////////////////////////////////////////////////////////////DQXEBENCJbTY6LEEwVBSCRULGABJIFEsizMkxXZgWFQODAYBQFgOA4FwTAoCgLAgBAFAsCAFA0BICgZA0EwPAsDgQA0EQOBEDwMA0DwPBIDwQA8EgNBYDgMBEDwOA0CAFAkDgIA8DoGGwGYJA8CwTA4DoQAUCgLAMEAMAoEQOAU2AcS///9MQEhMVEBCmq2IB4TEBIMFdTABYUFRARq6uFxQUEBGrqYgKCoqICFXVwwKCogIVdXERUVEBCrq4YFBQQEKuriAkJiogI1VTEBQWFRAQq6uHigqICFXVxAUFRUQEaqphgUFBARq6uJCgqICFXVxEVFRAQq6uGBQUEBCrq4gJiYqICNVUxATFRUQEKuriAoKiohV1cMCgqICNXVxIUFBCrq4gKiogIVdXDQoKCAjV1cRExQREKuriAmKiAjVVMRFRUQEKuriAoKiAhV1cMCgqICFXVxUSFBEnJyfnJ+bn////7APBoDgSAkDATA4CwHAUCQLggCQJAeCAHAiBoGAUCEIA2Bw1BIDwTBEDQNA4DQKAwDQPAcCQGgUB4HA2DAKAwBwIA4CQOAoCQJAgDAOBCDwYBUEQQBADAHAkCy97nf3vf/f3jWggKYNAsCwKA0EgQA4CwOAgBAFgqB4IAcCQLAgCQFAaB4GgiB4GAQBYEgUA4DQNAkCwOAwDAIAgBwEgQBwGguCYGggB4FAQB4HgcBoIAeCAHgkB4JAaCIGgsCYHgcCAHgYBYDgMAwCQIAkB//swxPaP7KhMbVnzoAYwCo3vPtABQNAoCgHAiCIIgiCIGA0CAJAcBYDgLA0CANAkCgLAkCQIAmCAHggB4DANBEEANAsCwIAcCYGgUBADAKAwCQIAwDQQA8EASBAEAOBEDgXBUFATA0EQQAsEQNA8EAQBgDQLAgBwIAgCQIggB4GgUBcDQKAgB4HAaBoFAQAgBwFgIAsDQIAgCQKAgB4IAaCQHAkCAHA0CQKAuCAHggBwJAcBwJAgCgJAkCgLAgCgJAgCQIgcCIHgcCIFgOAwDQJAkBwEAOBIEgSA0CgLA0CgLAcCIIAgBwIgYBgEgMAsCQHAeCIGAQBYDgLAcBwIAoCIIAcB4IA2BwEAQBIDgPBEDwMA4CwLAkCIJAeB4HgaCAGAQA4EQOAwDQJAkBwFA0CQJAoBwIAYBYDgNA4DQLAgCQGAUCIIAgB4JAgBwHAgCQJAeCQIAaB4HgYBIEgQBAEASBEEAOA0DwOA0DQKAoCAIAgBoIgcBwHAgBwHggBwJAgCcBggBwHgiB4HgaCAIf/8/////98///////7/////+dAcB4HgeBgEAOA4DANA8DwNAkCQHAeCIIASA4DwQA8DQNAkCAHAeCAIAcB4FAQBADwRA0CQHg2BQEgNAkCgLAgBwJAkCAHgcBoHgcCIHARBUEQRBEEQQAkBwIAYBQEARBIDgOA4EQeCAHgeBgEgXA8DgOBADwNA8DwOA4DgOBEDgNA0DQKAgCgIAgBUCAgCQIAcCIJAeCgJAeCAGgcBIEQRBEEQRBEEAQBIEQQAoDwKAoCgIAYCAGAgBgIAUAgCQIAcCIJAcCIJAcCA';
+      audio.volume = 0.3;
+      audio.play();
+    } catch (e) {
+      console.log('Audio not supported');
+    }
+    
+    return () => {
+      // Clean up
+      document.head.removeChild(style);
+    };
+  }, [showLoveMessage]);
   
   return (
     <>
       <div 
         id="canvas-container" 
         ref={containerRef} 
-        className={`fixed top-0 left-0 w-full h-full z-10 ${isHeartVisible ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}`}
+        className="fixed top-0 left-0 w-full h-full z-10 cursor-pointer"
+        style={{ pointerEvents: 'auto' }}
       />
       
-      {/* Hint message */}
-      {isHintVisible && isHeartVisible && (
-        <motion.div 
-          className="fixed bottom-8 left-0 right-0 text-center z-20 pointer-events-none"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 0.8, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <p className="text-white text-sm backdrop-blur-sm bg-black/30 px-4 py-2 rounded-full inline-block">
-            Click the heart for a surprise
-          </p>
-        </motion.div>
-      )}
+      {/* Burst particles */}
+      <div className="burst-particles-container">
+        {burstParticles.map((particle) => particle)}
+      </div>
+      
+      {/* Love message that appears after burst */}
+      <AnimatePresence>
+        {showLoveMessage && (
+          <motion.div 
+            ref={messageRef}
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 text-center"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ 
+              scale: 1, 
+              opacity: 1,
+              y: [0, -10, 0],
+              transition: { 
+                duration: 0.8, 
+                y: { repeat: Infinity, duration: 3, ease: "easeInOut" }
+              }
+            }}
+            exit={{ scale: 0, opacity: 0 }}
+            style={{ 
+              textShadow: "0 0 10px rgba(255,51,102,0.8)",
+              filter: "drop-shadow(0 0 10px rgba(255,51,102,0.5))"
+            }}
+          >
+            <h2 className="text-white font-['Dancing_Script'] text-4xl md:text-5xl">
+              I Love You So Much!
+            </h2>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

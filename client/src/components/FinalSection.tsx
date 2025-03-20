@@ -68,7 +68,17 @@ function GiftBox() {
   );
 }
 
-export default function FinalSection() {
+interface FinalSectionProps {
+  isActive?: boolean;
+  progress?: number;
+  onHeartBurst?: () => void;
+}
+
+export default function FinalSection({
+  isActive = false,
+  progress = 0,
+  onHeartBurst
+}: FinalSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const heartRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);

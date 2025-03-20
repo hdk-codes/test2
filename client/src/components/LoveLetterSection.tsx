@@ -305,7 +305,19 @@ function MiniatureScene() {
   );
 }
 
-export default function LoveLetterSection({ scrollProgress = 0 }) {
+interface LoveLetterSectionProps {
+  scrollProgress?: number;
+  isActive?: boolean;
+  progress?: number;
+  onContinue?: () => void;
+}
+
+export default function LoveLetterSection({
+  scrollProgress = 0,
+  isActive = false,
+  progress = 0,
+  onContinue
+}: LoveLetterSectionProps) {
   const [isLetterOpen, setIsLetterOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const letterWrapperRef = useRef<HTMLDivElement>(null);

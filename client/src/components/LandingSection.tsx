@@ -3,7 +3,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import InteractiveHeart from "@/components/InteractiveHeart";
 import { useParallax } from "@/hooks/use-parallax";
 
-export default function LandingSection({ scrollProgress = 0 }) {
+interface LandingSectionProps {
+  scrollProgress?: number;
+  isActive?: boolean;
+  progress?: number;
+  onContinue?: () => void;
+}
+
+export default function LandingSection({ 
+  scrollProgress = 0, 
+  isActive = false, 
+  progress = 0,
+  onContinue
+}: LandingSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLHeadingElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
