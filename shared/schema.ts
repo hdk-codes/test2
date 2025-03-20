@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 
 export const userSchema = z.object({
@@ -5,7 +6,7 @@ export const userSchema = z.object({
   password: z.string()
 });
 
-export const galleryItemSchema = z.object({
+export const insertGalleryItemSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   mediaUrl: z.string(),
@@ -13,6 +14,10 @@ export const galleryItemSchema = z.object({
   mediaType: z.string(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.any()).optional()
+});
+
+export const galleryItemSchema = insertGalleryItemSchema.extend({
+  id: z.number()
 });
 
 export type User = z.infer<typeof userSchema>;
