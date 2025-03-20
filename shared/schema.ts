@@ -6,19 +6,23 @@ export const userSchema = z.object({
   password: z.string()
 });
 
+export const mediaTypeSchema = z.enum(['image', 'video']);
+
 export const insertGalleryItemSchema = z.object({
-  title: z.string(),
+  title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   mediaUrl: z.string(),
   thumbnailUrl: z.string().optional(),
-  mediaType: z.string(),
-  tags: z.array(z.string()).optional(),
-  metadata: z.record(z.any()).optional()
+  mediaType: mediaTypeSchema,
+  tags: z.array(z.string()).optional().default([]),
+  metadata: z.record(z.any()).optional().default({})
 });
 
 export const galleryItemSchema = insertGalleryItemSchema.extend({
-  id: z.number()
+  id: z.string(),
+  dateCreated: z.date()
 });
 
 export type User = z.infer<typeof userSchema>;
 export type GalleryItem = z.infer<typeof galleryItemSchema>;
+export type MediaType = z.infer<typeof mediaTypeSchema>;

@@ -111,22 +111,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
+
+      const tags = req.body.tags ? 
+        req.body.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) : 
+        [];
+      
+      const metadata = req.body.metadata ? 
+        JSON.parse(req.body.metadata) : 
+        { fileSize: req.file.size, mimeType: req.file.mimetype };
       
       // Validate body using zod schema
       const validationResult = insertGalleryItemSchema.safeParse({
-        title: req.body.title,
-        description: req.body.description,
+        title: req.body.title?.trim(),
+        description: req.body.description?.trim(),
         mediaUrl: `/gallery_uploads/${req.file.filename}`,
-        thumbnailUrl: req.body.thumbnailUrl || null,
+        thumbnailUrl: req.body.thumbnailUrl?.trim() || null,
         mediaType: req.file.mimetype.startsWith('image') ? 'image' : 'video',
-        tags: req.body.tags ? req.body.tags.split(',') : [],
-        metadata: req.body.metadata ? JSON.parse(req.body.metadata) : {}
+        tags,
+        metadata
       });
       
       if (!validationResult.success) {
         return res.status(400).json({ 
           error: 'Invalid gallery item data',
-          details: validationResult.error.errors
+          details: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
         });
       }
       
