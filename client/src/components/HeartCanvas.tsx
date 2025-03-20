@@ -13,11 +13,17 @@ export default function HeartCanvas({ burstMoment = false }: HeartCanvasProps) {
   const particlesRef = useRef<THREE.Points | null>(null);
   const glowRef = useRef<THREE.Mesh | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
+  const lastInteractionRef = useRef<number>(Date.now());
+  const heartRateRef = useRef<number>(60); // BPM
+  const heartPhaseRef = useRef<number>(0);
+  const mouseInactiveTimeRef = useRef<number>(0);
   
   const { beta, gamma } = useDeviceOrientation();
   const [isInteracting, setIsInteracting] = useState(false);
+  const [interactionIntensity, setInteractionIntensity] = useState(0);
   const [showLoveMessage, setShowLoveMessage] = useState(false);
   const [burstParticles, setBurstParticles] = useState<JSX.Element[]>([]);
+  const [heartbeatState, setHeartbeatState] = useState<'rest' | 'active' | 'excited' | 'burst'>('rest');
   
   // Function to trigger heart burst effect
   const triggerHeartBurst = () => {

@@ -62,7 +62,7 @@ export default function LandingSection({
     };
   }, [textDispersed]);
   
-  // Create particle elements for text dispersion
+  // Create advanced particle elements for text dispersion
   const disperseText = () => {
     if (!textRef.current) return;
     
@@ -72,16 +72,82 @@ export default function LandingSection({
     
     // Create particles for each character in "Hi love ❣️"
     const textContent = "Hi love ❣️";
+    const chars = textContent.split('');
     
-    for (let i = 0; i < 100; i++) {
-      const size = Math.random() * 6 + 2;
+    // Create character-based particles
+    chars.forEach((char, charIndex) => {
+      const charWidth = rect.width / chars.length;
+      const startX = rect.left + (charWidth * charIndex) + (charWidth / 2);
+      const startY = rect.top + (rect.height / 2);
+      
+      // Create multiple particles for each character
+      for (let i = 0; i < 15; i++) {
+        const size = Math.random() * 10 + 2;
+        // Slightly randomize starting position around the character
+        const particleX = startX + (Math.random() * charWidth - charWidth / 2);
+        const particleY = startY + (Math.random() * 10 - 5);
+        
+        // Calculate random direction with 3D effect
+        const xDirection = (Math.random() * 300 - 150);
+        const zDirection = Math.random() * 100 + 50;
+        
+        // Choose color based on character (heart gets red particles)
+        const isHeart = char === '❣' || char === '️';
+        const pinkShades = ['#ff3366', '#ff6b9e', '#ff4d79', '#ff94b8', '#ff2d64'];
+        const whiteShades = ['#ffffff', '#f0f0f0', '#e5e5e5', '#fafafa', '#f5f5f5'];
+        
+        const color = isHeart || charIndex % 3 === 0 ? 
+                      pinkShades[Math.floor(Math.random() * pinkShades.length)] : 
+                      whiteShades[Math.floor(Math.random() * whiteShades.length)];
+        
+        // Add glowing effect for some particles
+        const glow = Math.random() > 0.7 ? `0 0 ${size * 2}px ${color}` : 'none';
+        
+        // Create different shapes (circles, squares, hearts)
+        let shape = 'border-radius: 50%;'; // Default circle
+        if (i % 8 === 0) shape = 'border-radius: 0%; rotate: 45deg;'; // Square
+        if (i % 10 === 0 && isHeart) {
+          // Heart shape for some particles on the heart character
+          shape = `
+            clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+            transform: scale(0.5);
+          `;
+        }
+        
+        // Apply random animation durations for more natural movement
+        const animDuration = 2 + Math.random() * 3;
+        
+        particlesArray.push(
+          <div 
+            key={`particle-${charIndex}-${i}`}
+            className="particle"
+            style={{
+              width: `${size}px`,
+              height: `${size}px`,
+              left: `${particleX}px`,
+              top: `${particleY}px`,
+              '--x': `${xDirection}px`,
+              animationDelay: `${Math.random() * 0.5}s`,
+              animationDuration: `${animDuration}s`,
+              backgroundColor: color,
+              boxShadow: glow,
+              opacity: Math.random() * 0.3 + 0.7,
+            } as React.CSSProperties}
+          />
+        );
+      }
+    });
+    
+    // Add some extra sparkle particles
+    for (let i = 0; i < 50; i++) {
+      const size = Math.random() * 4 + 1;
       const startX = rect.left + (Math.random() * rect.width);
       const startY = rect.top + (Math.random() * rect.height);
-      const xDirection = (Math.random() * 300) - 150;
+      const xDirection = (Math.random() * 400) - 200;
       
       particlesArray.push(
         <div 
-          key={`particle-${i}`}
+          key={`sparkle-${i}`}
           className="particle"
           style={{
             width: `${size}px`,
@@ -89,8 +155,10 @@ export default function LandingSection({
             left: `${startX}px`,
             top: `${startY}px`,
             '--x': `${xDirection}px`,
-            animationDelay: `${Math.random() * 0.5}s`,
-            backgroundColor: i % 5 === 0 ? '#ff3366' : 'white',
+            animationDelay: `${Math.random() * 0.8}s`,
+            backgroundColor: i % 5 === 0 ? '#ffcce6' : '#ffffff',
+            opacity: Math.random() * 0.5 + 0.5,
+            boxShadow: '0 0 5px white',
           }}
         />
       );
@@ -99,10 +167,22 @@ export default function LandingSection({
     setParticles(particlesArray);
     setTextDispersed(true);
     
+    // Vibration effect on mobile devices
+    if (navigator.vibrate) {
+      navigator.vibrate(200);
+    }
+    
     // Clean up particles after animation
     setTimeout(() => {
       setParticles([]);
-    }, 3000);
+    }, 4000);
+    
+    // Trigger continue event
+    if (onContinue) {
+      setTimeout(() => {
+        onContinue();
+      }, 1500);
+    }
   };
   
   // Typing animation effect
