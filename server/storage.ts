@@ -1,3 +1,4 @@
+
 import { 
   collection, 
   doc, 
@@ -5,90 +6,79 @@ import {
   getDocs, 
   addDoc, 
   query, 
-  where, 
-  limit, 
-  orderBy, 
-  startAt 
+  where,
+  orderBy,
+  limitToLast
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { 
-  User, 
-  InsertUser,
-  GalleryItem,
-  InsertGalleryItem
-} from "@shared/schema";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  getGalleryItems(limit?: number, offset?: number): Promise<GalleryItem[]>;
-  getGalleryItemById(id: string): Promise<GalleryItem | undefined>;
-  searchGalleryItems(query: string): Promise<GalleryItem[]>;
-  searchGalleryItemsByTags(tags: string[]): Promise<GalleryItem[]>;
-  createGalleryItem(galleryItem: InsertGalleryItem): Promise<GalleryItem>;
+  getUser(id: string): Promise<any>;
+  createUser(user: any): Promise<any>;
+  getGalleryItems(limit?: number): Promise<any[]>;
+  getGalleryItemById(id: string): Promise<any>;
+  searchGalleryItems(query: string): Promise<any[]>;
+  searchGalleryItemsByTags(tags: string[]): Promise<any[]>;
+  createGalleryItem(item: any): Promise<any>;
   linkGalleryItemToUser(userId: string, galleryItemId: string): Promise<void>;
 }
 
 export class FirebaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: string) {
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data() as User : undefined;
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.empty ? undefined : querySnapshot.docs[0].data() as User;
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
+  async createUser(user: any) {
     const docRef = await addDoc(collection(db, 'users'), user);
-    return { id: docRef.id, ...user } as User;
+    return { id: docRef.id, ...user };
   }
 
-  async getGalleryItems(limit = 50, offset = 0): Promise<GalleryItem[]> {
+  async getGalleryItems(limitCount = 50) {
     const q = query(
       collection(db, 'gallery'),
-      orderBy('dateCreated'),
-      limit(limit)
+      orderBy('dateCreated', 'desc'),
+      limitToLast(limitCount)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GalleryItem[];
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async getGalleryItemById(id: string): Promise<GalleryItem | undefined> {
+  async getGalleryItemById(id: string) {
     const docRef = doc(db, 'gallery', id);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as GalleryItem : undefined;
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : undefined;
   }
 
-  async searchGalleryItems(searchQuery: string): Promise<GalleryItem[]> {
+  async searchGalleryItems(searchQuery: string) {
     const q = query(
       collection(db, 'gallery'),
       where('title', '>=', searchQuery),
       where('title', '<=', searchQuery + '\uf8ff')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GalleryItem[];
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async searchGalleryItemsByTags(tags: string[]): Promise<GalleryItem[]> {
+  async searchGalleryItemsByTags(tags: string[]) {
     const q = query(
       collection(db, 'gallery'),
       where('tags', 'array-contains-any', tags)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GalleryItem[];
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async createGalleryItem(item: InsertGalleryItem): Promise<GalleryItem> {
-    const docRef = await addDoc(collection(db, 'gallery'), item);
-    return { id: docRef.id, ...item } as GalleryItem;
+  async createGalleryItem(item: any) {
+    const docRef = await addDoc(collection(db, 'gallery'), {
+      ...item,
+      dateCreated: new Date()
+    });
+    return { id: docRef.id, ...item };
   }
 
-  async linkGalleryItemToUser(userId: string, galleryItemId: string): Promise<void> {
+  async linkGalleryItemToUser(userId: string, galleryItemId: string) {
     await addDoc(collection(db, 'user_gallery_links'), {
       userId,
       galleryItemId,
