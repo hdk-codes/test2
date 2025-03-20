@@ -146,6 +146,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Static file serving for gallery uploads
+  // Test Firebase connection
+  app.get('/api/test-firebase', async (req: Request, res: Response) => {
+    try {
+      const testDoc = await storage.getUser('test');
+      res.json({ status: 'Firebase connection successful', testDoc });
+    } catch (error) {
+      console.error('Firebase test error:', error);
+      res.status(500).json({ error: 'Firebase connection failed', details: error.message });
+    }
+  });
+
   app.use('/gallery_uploads', (req, res, next) => {
     // Add cache headers
     res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
