@@ -25,15 +25,49 @@ export default function HeartCanvas({ burstMoment = false }: HeartCanvasProps) {
   const [burstParticles, setBurstParticles] = useState<JSX.Element[]>([]);
   const [heartbeatState, setHeartbeatState] = useState<'rest' | 'active' | 'excited' | 'burst'>('rest');
   
-  // Function to trigger heart burst effect
+  // Function to trigger heart burst effect with enhanced animation and feedback
   const triggerHeartBurst = () => {
+    // Set heartbeat state to burst mode
+    setHeartbeatState('burst');
+    
+    // Dramatically increase heart rate
+    heartRateRef.current = 180;
+    
     // Create explosion of particles
     createBurstParticles();
     
-    // Show message after a short delay
+    // Trigger device vibration if available (stronger pulse pattern)
+    if (navigator.vibrate && window.innerWidth <= 768) {
+      navigator.vibrate([100, 50, 150, 50, 200]);
+    }
+    
+    // Play heart beat sound with high intensity
+    try {
+      const audio = new Audio();
+      audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwMD4+Pj4+PkxMTExMTFpaWlpaWmhoaGhoaHZ2dnZ2doSEhISEhJKSkpKSkqCgoKCgoK6urq6urrKysr6+vr6+vr6+vr6+vsbGxsbGxtLS0tLS0tra2tra2uLi4uLi4urq6urq6vLy8vLy8vr6+vr6+v///wAAADxhdmMxOUQMUAAAAwAAAAAAATwwWkAAAAAAAAAAAAAAAAAAAAAAACIiIiIiIhE+PT09PTWmpqampppaXl5eXl48XDz///9MfT///zE+Pj4+PiIiIiIiIgAAAAAAAAAAAAD/+0LEcQAMKABnmDAAAYQACPMAAAAAKgjAo9CCNCCCRgg8IBTMfC3R5ipiRCAuOCCB0zN0vBeeMEcJQQIEAweCAIGDx9ZC8Kj+BTM7P6Orj+fPfMfT889M4/5Ppp/w0/PvQ/TPO/4hP8Mz8o/n/D03//w3/mc+fmf//M5/nO+fhF/i2t/yfM5/wyf/8p////yX////uQAGP//MZ///If///8jK//in////xE///yL///8JCaAkDkMf/yZv/+ZP//5kxm//Mv///yf///KCgIgU//pIKv/6k///+Sk///nCSzjDNCZkmfo5jLAilpESgkIjckdU+p3XkZCiMUlJDNHKlWsNS8JWQ6oCkqRLwWzSpIk4aii5CrVCfmMQFIIhQVSQ1KSZOTrJdpIJQcBihZDYgBEG4USHZN//////8wMDAxP//////8iBUVigoKsBAVFQoKCrAwVY2CxUFRVlRUVFWNgsVBUVZUVFRVjYQFRUFBVlRUVFWCBAWCAqKgoKsqKioqwQICgqCgqyoqKirBAVFQoKCrKioqKsbBYqCoqyoqKirGwWKgqKsqKioqxsICoqCgqyoqKirBAVFQoKCrKioqKsECAoKgoKsqKioqwQFRUKCgqyoqKirGwWKgqKsqKioqxsFioKirKioqKsEBUVCgoKsqKioqwQICgqCgqyoqKirBAgKCoKCrKioqKsEBUVCgoKsqKioqyZlVVVZlFVVZlIUUUUZlVVVZlVVVWZVVVVmVVVVmUUVVZlVVVWZVVVVmVVVVZlFVVWZVVVVmVVVVZlVVVWZRRVVmVVVVZlVVVWZVVVVmUUVVZlVVVWZVVVVmVVVVZlFFVWZVVVVmVVVV';
+      audio.volume = 0.6;
+      audio.playbackRate = 1.4;
+      audio.play();
+    } catch (e) {
+      console.log('Audio not supported');
+    }
+    
+    // Show love message after a short delay
     setTimeout(() => {
       setShowLoveMessage(true);
-    }, 500);
+    }, 800);
+    
+    // Return to excited state after burst
+    setTimeout(() => {
+      setHeartbeatState('excited');
+      heartRateRef.current = 120;
+    }, 2000);
+    
+    // And finally return to resting state
+    setTimeout(() => {
+      setHeartbeatState('rest');
+      heartRateRef.current = 80;
+    }, 5000);
   };
   
   // Handle burst moment triggered from parent component
@@ -336,21 +370,59 @@ export default function HeartCanvas({ burstMoment = false }: HeartCanvasProps) {
     
     function onDocumentInteraction() {
       setIsInteracting(true);
+      lastInteractionRef.current = Date.now();
       
-      // Play heart beat sound
+      // Increase the heart rate with each interaction
+      heartRateRef.current = Math.min(heartRateRef.current + 15, 150);
+      
+      // Set heartbeat state based on heart rate
+      if (heartRateRef.current > 120) {
+        setHeartbeatState('excited');
+      } else if (heartRateRef.current > 80) {
+        setHeartbeatState('active');
+      }
+      
+      // Increase interaction intensity (for visual effects)
+      setInteractionIntensity(prev => Math.min(prev + 0.25, 1.0));
+      
+      // Use browser vibration API on mobile
+      if (navigator.vibrate && window.innerWidth <= 768) {
+        navigator.vibrate(heartRateRef.current < 100 ? 30 : 50);
+      }
+      
+      // Play heart beat sound with volume based on heart rate
       try {
         const audio = new Audio();
         audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwMD4+Pj4+PkxMTExMTFpaWlpaWmhoaGhoaHZ2dnZ2doSEhISEhJKSkpKSkqCgoKCgoK6urq6urrKysr6+vr6+vr6+vr6+vsbGxsbGxtLS0tLS0tra2tra2uLi4uLi4urq6urq6vLy8vLy8vr6+vr6+v///wAAADxhdmMxOUQMUAAAAwAAAAAAATwwWkAAAAAAAAAAAAAAAAAAAAAAACIiIiIiIhE+PT09PTWmpqampppaXl5eXl48XDz///9MfT///zE+Pj4+PiIiIiIiIgAAAAAAAAAAAAD/+0LEcQAMKABnmDAAAYQACPMAAAAAKgjAo9CCNCCCRgg8IBTMfC3R5ipiRCAuOCCB0zN0vBeeMEcJQQIEAweCAIGDx9ZC8Kj+BTM7P6Orj+fPfMfT889M4/5Ppp/w0/PvQ/TPO/4hP8Mz8o/n/D03//w3/mc+fmf//M5/nO+fhF/i2t/yfM5/wyf/8p////yX////uQAGP//MZ///If///8jK//in////xE///yL///8JCaAkDkMf/yZv/+ZP//5kxm//Mv///yf///KCgIgU//pIKv/6k///+Sk///nCSzjDNCZkmfo5jLAilpESgkIjckdU+p3XkZCiMUlJDNHKlWsNS8JWQ6oCkqRLwWzSpIk4aii5CrVCfmMQFIIhQVSQ1KSZOTrJdpIJQcBihZDYgBEG4USHZN//////8wMDAxP//////8iBUVigoKsBAVFQoKCrAwVY2CxUFRVlRUVFWNgsVBUVZUVFRVjYQFRUFBVlRUVFWCBAWCAqKgoKsqKioqwQICgqCgqyoqKirBAVFQoKCrKioqKsbBYqCoqyoqKirGwWKgqKsqKioqxsICoqCgqyoqKirBAVFQoKCrKioqKsECAoKgoKsqKioqwQFRUKCgqyoqKirGwWKgqKsqKioqxsFioKirKioqKsEBUVCgoKsqKioqwQICgqCgqyoqKirBAgKCoKCrKioqKsEBUVCgoKsqKioqyZlVVVZlFVVZlIUUUUZlVVVZlVVVWZVVVVmVVVVmUUVVZlVVVWZVVVVmVVVVZlFVVWZVVVVmVVVVZlVVVWZRRVVmVVVVZlVVVWZVVVVmUUVVZlVVVWZVVVVmVVVVZlFFVWZVVVVmVVVV';
-        audio.volume = 0.3;
+        
+        // Adjust volume based on heart rate (more intense at higher BPM)
+        const volumeBase = 0.3;
+        const volumeBoost = (heartRateRef.current - 60) / 180; // 0 to 0.5 range based on 60-150 BPM
+        audio.volume = Math.min(volumeBase + volumeBoost, 0.8);
+        
+        audio.playbackRate = Math.min(1 + (heartRateRef.current - 60) / 150, 1.5); // Speed up based on heart rate
         audio.play();
       } catch (e) {
         console.log('Audio not supported');
       }
       
-      // Reset after animation
+      // Schedule heart to gradually calm down after a longer period
+      setTimeout(() => {
+        if (Date.now() - lastInteractionRef.current >= 2500) {
+          heartRateRef.current = Math.max(heartRateRef.current - 10, 60);
+          setInteractionIntensity(prev => Math.max(prev - 0.3, 0));
+          
+          // Return to normal state if heart has calmed enough
+          if (heartRateRef.current < 80) {
+            setHeartbeatState('rest');
+          }
+        }
+      }, 3000);
+      
+      // Reset interaction flag (for animation triggers)
       setTimeout(() => {
         setIsInteracting(false);
-      }, 1000);
+      }, 800);
     }
     
     function triggerHeartBurst() {
@@ -467,60 +539,137 @@ export default function HeartCanvas({ burstMoment = false }: HeartCanvasProps) {
         targetY = mouseY * 0.25;
       }
       
+      // Calculate heart rate and beatPhase
+      const time = Date.now() * 0.001;
+      const currentHeartRate = heartRateRef.current;
+      const beatsPerSecond = currentHeartRate / 60;
+      
+      // Analyze mouse/touch inactivity to make heart gradually calm down when not interacted with
+      mouseInactiveTimeRef.current = (Date.now() - lastInteractionRef.current) / 1000;
+      if (mouseInactiveTimeRef.current > 3 && heartRateRef.current > 60) {
+        // Gradually reduce heart rate to normal when not interacting
+        heartRateRef.current = Math.max(60, heartRateRef.current - 0.2);
+      }
+      
+      // Calculate heart beat phase (0 to 1)
+      heartPhaseRef.current = (heartPhaseRef.current + beatsPerSecond * 0.016) % 1;
+      const beatPhase = heartPhaseRef.current;
+      
+      // Create dynamic pulse based on current heart rate
+      // This creates a realistic heartbeat pattern with systole and diastole phases
+      let heartPulse;
+      if (beatPhase < 0.1) { // Quick contraction phase (systole)
+        heartPulse = 1 + 0.25 * Math.sin(beatPhase / 0.1 * Math.PI);
+      } else if (beatPhase < 0.5) { // Relaxation phase (diastole)
+        heartPulse = 1 + 0.1 * Math.sin((beatPhase - 0.1) / 0.4 * Math.PI + Math.PI);
+      } else { // Resting phase
+        heartPulse = 1 + 0.03 * Math.sin((beatPhase - 0.5) / 0.5 * Math.PI);
+      }
+      
+      // Excitement factor (0-1) based on interaction and heart rate
+      const excitement = Math.min(1, (heartRateRef.current - 60) / 90); // 60-150 BPM range
+
       if (heart) {
         // Smoother, more responsive heart rotation
         const rotationSpeed = 0.08;
         heart.rotation.y += rotationSpeed * (targetX - heart.rotation.y);
         heart.rotation.x += rotationSpeed * (targetY + Math.PI - heart.rotation.x);
         
-        // Subtle oscillation for breathing effect
-        const time = Date.now() * 0.001;
-        const breathe = Math.sin(time * 1.2) * 0.03 + 1.0;
-        const baseScale = isInteracting ? 0.45 : 0.4;
+        // Dynamic scale based on heart rate and phase
+        const baseScale = 0.4 * (1 + excitement * 0.1); // Slightly larger when excited
+        const beatStrength = heartbeatState === 'burst' ? 0.2 : 
+                             heartbeatState === 'excited' ? 0.15 : 
+                             heartbeatState === 'active' ? 0.1 : 0.05;
+        
         heart.scale.set(
-          baseScale * breathe,
-          baseScale * breathe,
-          baseScale * breathe
+          baseScale * heartPulse * (1 + (beatPhase < 0.2 ? beatStrength : 0)),
+          baseScale * heartPulse * (1 - (beatPhase < 0.2 ? beatStrength * 0.7 : 0)),
+          baseScale * heartPulse * (1 + (beatPhase < 0.2 ? beatStrength * 0.5 : 0))
         );
+        
+        // Dynamic color based on excitement
+        if (heart.material instanceof THREE.MeshPhysicalMaterial) {
+          // More intense red when excited
+          const r = 1.0;
+          const g = 0.2 - excitement * 0.15;
+          const b = 0.4 - excitement * 0.25;
+          heart.material.emissive.setRGB(r * 0.5, g * 0.3, b * 0.3);
+          heart.material.emissiveIntensity = 0.5 + excitement * 0.5;
+          
+          // More metallic/reflective when excited
+          heart.material.metalness = 0.7 + excitement * 0.3;
+          heart.material.clearcoat = 0.8 + excitement * 0.2;
+        }
         
         // Update glow position and effects
         if (glow) {
           glow.position.copy(heart.position);
           glow.rotation.copy(heart.rotation);
           
-          // Pulsating glow with phase offset from heart
-          const glowIntensity = isInteracting ? 0.3 : 0.2;
-          const glowPulse = Math.sin(time * 1.2 + 0.5) * 0.08 + glowIntensity;
+          // Pulsating glow with phase offset from heart that intensifies with excitement
+          const glowBaseIntensity = 0.2 + excitement * 0.2;
+          const glowPulseStrength = 0.08 + excitement * 0.17;
+          const glowPulse = glowBaseIntensity + glowPulseStrength * 
+                            (beatPhase < 0.2 ? Math.sin(beatPhase / 0.2 * Math.PI) : 0);
+          
           if (glow.material instanceof THREE.MeshBasicMaterial) {
             glow.material.opacity = glowPulse;
+            
+            // Color shifts with excitement from pink to red
+            const r = 1.0;
+            const g = 0.42 - excitement * 0.3;
+            const b = 0.55 - excitement * 0.35;
+            glow.material.color.setRGB(r, g, b);
           }
           
-          // Glow scale changes with interaction
-          const glowScale = isInteracting ? 1.2 : 1 + Math.sin(time) * 0.05;
-          glow.scale.set(glowScale, glowScale, glowScale * 0.6);
+          // Glow size pulses with heartbeat
+          const glowBaseScale = 1 + excitement * 0.3;
+          const glowPulseScale = 1 + (beatPhase < 0.2 ? 0.2 * Math.sin(beatPhase / 0.2 * Math.PI) : 0);
+          glow.scale.set(
+            glowBaseScale * glowPulseScale, 
+            glowBaseScale * glowPulseScale, 
+            glowBaseScale * glowPulseScale * 0.6
+          );
         }
         
         // Update point light
         if (pointLight) {
-          const intensity = isInteracting ? 3 : 2;
-          pointLight.intensity = intensity + Math.sin(time * 2) * 0.5;
+          // Light pulses with heart
+          const lightBaseIntensity = 2 + excitement * 2;
+          const lightPulse = lightBaseIntensity * (1 + (beatPhase < 0.15 ? 0.7 * Math.sin(beatPhase / 0.15 * Math.PI) : 0));
+          pointLight.intensity = lightPulse;
           
-          // Subtle color shift
-          const hue = 0.95 + Math.sin(time * 0.5) * 0.05; // Subtle shift between pink and red
+          // Color shifts with heart rate
+          const hue = 0.95 - excitement * 0.05; // Shift from pink to deeper red
           pointLight.color.setHSL(hue, 1, 0.5);
+        }
+        
+        // Update rim light based on excitement
+        if (rimLight) {
+          rimLight.intensity = 2 + excitement * 1.5;
         }
       }
       
-      // Update particles
+      // Update particles behavior based on excitement
       if (particles && particles.material instanceof THREE.ShaderMaterial) {
-        particles.material.uniforms.time.value = Date.now() * 0.001;
+        particles.material.uniforms.time.value = time;
+        
+        // Particles move faster when heart is excited
+        const particleSpeed = 1 + excitement * 1.5;
+        particles.material.uniforms.time.value *= particleSpeed;
         
         // Subtle rotation of the particle system
-        particles.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
+        particles.rotation.y = Math.sin(time * 0.0005 * particleSpeed) * 0.2;
         
-        // Scale particles during interaction
-        const particleScale = isInteracting ? 1.1 : 1.0;
-        particles.scale.set(particleScale, particleScale, particleScale);
+        // Scale particles during excitement
+        const particleScale = 1.0 + excitement * 0.2;
+        // Add pulsing effect timed with heartbeat
+        const particlePulse = 1 + (beatPhase < 0.2 ? 0.1 * Math.sin(beatPhase / 0.2 * Math.PI) : 0);
+        particles.scale.set(
+          particleScale * particlePulse, 
+          particleScale * particlePulse, 
+          particleScale * particlePulse
+        );
       }
     }
     
