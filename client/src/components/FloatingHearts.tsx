@@ -1,33 +1,48 @@
 
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface FloatingHeartsProps {
   count?: number;
 }
 
-export default function FloatingHearts({ count = 10 }: FloatingHeartsProps) {
+export default function FloatingHearts({ count = 15 }: FloatingHeartsProps) {
+  const [hearts, setHearts] = useState<Array<{ id: number; x: number; delay: number }>>([]);
+
+  useEffect(() => {
+    const newHearts = Array.from({ length: count }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      delay: Math.random() * 5
+    }));
+    setHearts(newHearts);
+  }, [count]);
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: count }).map((_, i) => (
+      {hearts.map((heart) => (
         <motion.div
-          key={i}
-          className="absolute text-2xl"
+          key={heart.id}
           initial={{ 
-            x: Math.random() * window.innerWidth,
-            y: window.innerHeight + 100
+            y: "110vh",
+            x: `${heart.x}vw`,
+            opacity: 0,
+            scale: 0.5
           }}
-          animate={{
-            y: -100,
-            x: `calc(${Math.random() * 100}vw)`,
+          animate={{ 
+            y: "-10vh",
+            opacity: [0, 1, 1, 0],
+            scale: [0.5, 1, 1, 0.5]
           }}
-          transition={{
-            duration: 10 + Math.random() * 10,
+          transition={{ 
+            duration: 10,
+            delay: heart.delay,
             repeat: Infinity,
-            ease: "linear",
-            delay: Math.random() * 5
+            ease: "linear"
           }}
+          className="absolute text-2xl"
         >
-          {['❤️', '💝', '💖', '💕'][Math.floor(Math.random() * 4)]}
+          ❤️
         </motion.div>
       ))}
     </div>
