@@ -637,6 +637,47 @@ export default function HeartCanvas({ burstMoment = false }: HeartCanvasProps) {
   
   // Create burst particles effect
   const createBurstParticles = () => {
+    // Create explosion effect with particles
+    const particlesArray: JSX.Element[] = [];
+    const colors = ['#ff3366', '#ff6b8b', '#ff94a9', '#ffb6c1', '#ffffff'];
+    
+    for (let i = 0; i < 120; i++) {
+      const size = Math.random() * 8 + 4;
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = Math.random() * 10 + 5;
+      const startDistance = Math.random() * 20;
+      const startX = window.innerWidth / 2 + Math.cos(angle) * startDistance;
+      const startY = window.innerHeight / 2 + Math.sin(angle) * startDistance;
+      const delay = Math.random() * 200;
+      const duration = Math.random() * 1000 + 1000;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      particlesArray.push(
+        <motion.div 
+          key={`burst-particle-${i}`}
+          className="absolute rounded-full pointer-events-none z-50"
+          initial={{ 
+            x: startX, 
+            y: startY, 
+            opacity: 1,
+            width: `${size}px`, 
+            height: `${size}px`, 
+            backgroundColor: color
+          }}
+          animate={{ 
+            x: startX + Math.cos(angle) * velocity * 30, 
+            y: startY + Math.sin(angle) * velocity * 30, 
+            opacity: 0,
+            scale: Math.random() * 0.5 + 0.5
+          }}
+          transition={{ 
+            duration: duration / 1000, 
+            delay: delay / 1000,
+            ease: "easeOut" 
+          }}
+        />
+      );
+    }
     const particleCount = 150;
     const particles: JSX.Element[] = [];
     
