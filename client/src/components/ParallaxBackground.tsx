@@ -12,6 +12,13 @@ interface Star {
   color: string;
 }
 
+interface ParallaxLayer {
+  imageSrc: string;
+  depth: number;
+  opacity: number;
+  scale: number;
+}
+
 export default function ParallaxBackground({ scrollProgress = 0 }) {
   const starsContainerRef = useRef<HTMLDivElement>(null);
   const starFieldRef = useRef<HTMLDivElement>(null);
@@ -19,6 +26,40 @@ export default function ParallaxBackground({ scrollProgress = 0 }) {
   const nebulaRef = useRef<HTMLDivElement>(null);
   const { beta, gamma } = useDeviceOrientation();
   const [starsGenerated, setStarsGenerated] = useState(false);
+  
+  // Define romantic couple background layers
+  const coupleImages: ParallaxLayer[] = [
+    {
+      imageSrc: '/images/couple/wallpaperflare.com_wallpaper (8).jpg',
+      depth: -400,
+      opacity: 0.7,
+      scale: 1.1
+    },
+    {
+      imageSrc: '/images/couple/wallpaperflare.com_wallpaper.jpg',
+      depth: -300,
+      opacity: 0.6,
+      scale: 1.2
+    },
+    {
+      imageSrc: '/images/couple/wallpaperflare.com_wallpaper (2).jpg',
+      depth: -200,
+      opacity: 0.5,
+      scale: 1.2
+    },
+    {
+      imageSrc: '/images/couple/wallpaperflare.com_wallpaper (4).jpg',
+      depth: -150,
+      opacity: 0.4,
+      scale: 1.3
+    }
+  ];
+  
+  // Current image is determined by scroll progress
+  const activeImageIndex = Math.min(
+    Math.floor(scrollProgress * (coupleImages.length + 1)), 
+    coupleImages.length - 1
+  );
 
   // Generate 3D star field with different layers for depth
   useEffect(() => {
@@ -247,6 +288,44 @@ export default function ParallaxBackground({ scrollProgress = 0 }) {
         transformStyle: 'preserve-3d'
       }}
     >
+      {/* Romantic couple image layers */}
+      {coupleImages.map((layer, index) => (
+        <motion.div
+          key={`couple-layer-${index}`}
+          className="couple-image-layer absolute inset-0"
+          style={{
+            backgroundImage: `url(${layer.imageSrc})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: index === activeImageIndex ? layer.opacity : 0,
+            zIndex: index,
+            transformStyle: 'preserve-3d',
+            willChange: 'transform, opacity',
+            transition: 'opacity 1.5s ease-in-out'
+          }}
+          animate={{
+            x: x * (0.3 + index * 0.1),
+            y: y * (0.3 + index * 0.1),
+            scale: layer.scale,
+            translateZ: layer.depth + (scrollProgress * 200)
+          }}
+          transition={{
+            type: "spring",
+            damping: 40 - index * 5,
+            stiffness: 40 - index * 5
+          }}
+        >
+          {/* Dark overlay to create depth and better contrast */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"
+            style={{ 
+              mixBlendMode: 'multiply', 
+              opacity: 0.7
+            }}
+          />
+        </motion.div>
+      ))}
+      
       {/* Nebula layer (background) */}
       <motion.div
         ref={nebulaRef}
@@ -268,7 +347,8 @@ export default function ParallaxBackground({ scrollProgress = 0 }) {
         className="star-field absolute inset-0 z-10"
         style={{ 
           transformStyle: 'preserve-3d',
-          willChange: 'transform'
+          willChange: 'transform',
+          opacity: 0.7 // Make stars slightly transparent to let the images show through
         }}
         animate={{
           x: x * 0.6,
@@ -300,6 +380,14 @@ export default function ParallaxBackground({ scrollProgress = 0 }) {
           type: "spring",
           damping: 20,
           stiffness: 60
+        }}
+      />
+      
+      {/* Subtle vignette for depth */}
+      <div 
+        className="absolute inset-0 z-30 pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, transparent 40%, rgba(0,0,0,0.4) 100%)'
         }}
       />
     </div>
