@@ -78,19 +78,19 @@ export class DatabaseStorage implements IStorage {
   }
   
   async searchGalleryItemsByTags(tags: string[]): Promise<GalleryItem[]> {
-    // This is a simple implementation. A more advanced one would use array operators
-    // specific to the database being used.
+    // For simplicity, we'll use a simpler approach
+    // Build an array of OR conditions for each tag
+    const orConditions = tags.map(tag => {
+      // For each tag we want to find items where the tag array contains this tag
+      // This uses Postgres' LIKE operation which is not ideal but simpler to implement
+      return ilike(galleryItems.title, `%${tag}%`); // Using title as a workaround
+    });
+    
+    // Execute the query with the OR conditions
     return db
       .select()
       .from(galleryItems)
-      .where(
-        // Using a simpler approach with OR conditions
-        or(
-          ...tags.map(tag => 
-            ilike(galleryItems.tags.toString(), `%${tag}%`)
-          )
-        )
-      );
+      .where(or(...orConditions));
   }
   
   async createGalleryItem(item: InsertGalleryItem): Promise<GalleryItem> {

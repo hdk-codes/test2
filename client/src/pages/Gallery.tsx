@@ -41,7 +41,9 @@ export default function Gallery() {
     
     // If we have selected tags, filter by tags
     if (searchTags.length > 0) {
-      if (!item.tags || !searchTags.some(tag => item.tags.includes(tag))) {
+      // Check if item has tags and at least one tag matches our search tags
+      const itemTags = item.tags || [];
+      if (itemTags.length === 0 || !itemTags.some(tag => searchTags.includes(tag))) {
         return false;
       }
     }
