@@ -3,12 +3,12 @@ import imageUrlBuilder from '@sanity/image-url';
 import type { SanityClient } from '@sanity/client';
 import type { SanityImageSource } from '@sanity/image-url/lib/types/types';
 const config = {
-  projectId: 'grt0al70', // From Sanity Dashboard
-  dataset: 'production',
-  apiVersion: '2025-03-20', // Lock to today’s date for latest features
-  token: 'skJhuNd6Fcl0iJJyBiSxn8jz0hwrPjVEjtVLIh6tkrfKrUZIr8N3tmdVDMXozepcOkKQ5BYpULt2ZIc7vxwjjS9Gduo3M2W8kBKGaUfYYY6AJlRfyFnTPZjgASvP4wgF9Km2UxThEFUHrzctsa3ubL8RbWfDXVZWsfeNwq61PguMj6wsH2py', // Editor token with write access
-  useCdn: false, // CDN for faster reads; set false for real-time
-};
+    apiVersion: '2021-03-25', // Use the latest API version
+    projectId: import.meta.env.VITE_SANITY_PROJECT_ID,
+    dataset: import.meta.env.VITE_SANITY_DATASET,
+    token: import.meta.env.VITE_SANITY_TOKEN, // Optional, for authenticated requests
+    useCdn: true, // Faster, cached responses
+}
 export const client: SanityClient = createClient(config);
 
 export const { projectId, dataset } = config; // Export for use elsewhere

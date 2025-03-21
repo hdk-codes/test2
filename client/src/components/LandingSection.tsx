@@ -1,48 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { motion } from "framer-motion";
-import { client } from "@/lib/sanityClient";
-import { LandingData } from "@/lib/schema";
 
 interface Props {
-  isActive: boolean;
-  progress: number;
+  title: string;
+  message: string;
   onContinue: () => void;
 }
 
-export default function LandingSection({ isActive, progress, onContinue }: Props) {
-  const [data, setData] = useState<LandingData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function LandingSection({ title, message, onContinue }: Props) {
   const [displayText, setDisplayText] = useState("");
 
   useEffect(() => {
-    client
-      .fetch<LandingData>('*[_type == "landingSection"][0]{title, message}')
-      .then(setData)
-      .catch(() => setError("Failed to load content"));
-  }, []);
-
-  useEffect(() => {
-    if (!data || !isActive) return;
-    const fullText = data.title || "Hi love ❣️";
+    const fullText = title || "Hi love ❣️";
     let index = 0;
     const timer = setInterval(() => {
       if (index < fullText.length) {
         setDisplayText(fullText.slice(0, index + 1));
         index++;
-      } else {
-        clearInterval(timer);
-      }
+      } else clearInterval(timer);
     }, 150);
     return () => clearInterval(timer);
-  }, [data, isActive]);
-
-  if (error) return <div className="text-white">{error}</div>;
-  if (!data) return <div className="text-white">Loading...</div>;
+  }, [title]);
 
   return (
     <section className="flex flex-col items-center justify-center h-full text-white">
       <motion.h1
-        className="text-4xl sm:text-6xl md:text-8xl font-['Dancing_Script'] mb-8"
+        className="text-4xl sm:text-6xl md:text-8xl font-['Dancing_Script'] mb-8  overflow-hidden"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: "easeOut" }}
@@ -55,7 +38,7 @@ export default function LandingSection({ isActive, progress, onContinue }: Props
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 1 }}
       >
-        {data.message}
+        {message}
       </motion.p>
       <motion.button
         onClick={onContinue}
@@ -68,7 +51,7 @@ export default function LandingSection({ isActive, progress, onContinue }: Props
       </motion.button>
       <motion.div
         className="absolute bottom-10 text-lg"
-        animate={{ y: [0, -15, 0] }}
+        animate={{ y: [0, -15, 0] ,opacity:[0.5,1,0.5]}}
         transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
       >
         Scroll Down ↓

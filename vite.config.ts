@@ -15,6 +15,8 @@ export default defineConfig({
     },
   },
   root: path.resolve(__dirname, "client"),
+  envDir: path.resolve(__dirname), // Load .env from project root, not client/
+  envPrefix: "VITE_", // Explicitly allow VITE_ vars (optional, default anyway)
   build: {
     outDir: path.join(__dirname, "client", "dist"),
     emptyOutDir: true,
