@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import Gallery from "@/pages/Gallery";
 import { motion } from "framer-motion";
 
+
 // Navigation component with beautiful animation effects
 function Navigation() {
   return (
@@ -19,6 +20,7 @@ function Navigation() {
       <div className="flex gap-4">
         <NavLink href="/">Home</NavLink>
         <NavLink href="/gallery">Gallery</NavLink>
+    
       </div>
     </motion.nav>
   );
@@ -51,6 +53,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/gallery" component={Gallery} />
+     
         {/* Fallback to 404 */}
         <Route component={NotFound} />
       </Switch>
@@ -61,8 +64,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <div className="app-container">
       <Router />
       <Toaster />
+      </div>             
     </QueryClientProvider>
   );
 }

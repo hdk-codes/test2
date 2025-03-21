@@ -1,25 +1,18 @@
-import * as React from "react"
+// src/components/ui/input.tsx
+import { InputHTMLAttributes } from 'react';
 
-import { cn } from "@/lib/utils"
+export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...props} className={`p-2 border rounded ${props.className}`} />;
+}
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {}
+// src/components/ui/button.tsx
+import { ButtonHTMLAttributes } from 'react';
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Input.displayName = "Input"
-
-export { Input }
+export function Button({ variant, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'outline' }) {
+  return (
+    <button
+      {...props}
+      className={`p-2 rounded ${variant === 'outline' ? 'border border-gray-300' : 'bg-blue-500 text-white'} ${props.className}`}
+    />
+  );
+}

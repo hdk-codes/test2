@@ -1,0 +1,26 @@
+/* src/styles.css */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron&display=swap');
+
+body {
+  font-family: 'Orbitron', sans-serif;
+  cursor: url('/custom-cursor.png'), auto; /* Add a custom cursor image */
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.neumorphic {
+  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2), -5px -5px 10px rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background: #purple-500;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #pink-500;
+  border-radius: 4px;
+}
