@@ -6,3 +6,5 @@ vite.config.ts.*
 *.tar.gz
 firebase.ts
 .env*
+# Local Netlify folder
+.netlify

@@ -1,17 +1,17 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { motion } from "framer-motion";
 
-interface Props {
-  title: string;
-  message: string;
+export interface LandingSectionProps {
+  isActive: boolean;
+  progress: number;
   onContinue: () => void;
 }
 
-export default function LandingSection({ title, message, onContinue }: Props) {
+export default function LandingSection({ isActive, progress, onContinue }: LandingSectionProps) {
   const [displayText, setDisplayText] = useState("");
 
   useEffect(() => {
-    const fullText = title || "Hi love ❣️";
+    const fullText = isActive ? "Hi love ❣️" : "";
     let index = 0;
     const timer = setInterval(() => {
       if (index < fullText.length) {
@@ -20,7 +20,7 @@ export default function LandingSection({ title, message, onContinue }: Props) {
       } else clearInterval(timer);
     }, 150);
     return () => clearInterval(timer);
-  }, [title]);
+  }, [isActive]);
 
   return (
     <section className="flex flex-col items-center justify-center h-full text-white">
@@ -38,7 +38,7 @@ export default function LandingSection({ title, message, onContinue }: Props) {
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 1 }}
       >
-        {message}
+        {`Progress: ${progress}%`}
       </motion.p>
       <motion.button
         onClick={onContinue}

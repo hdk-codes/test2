@@ -1,0 +1,115 @@
+
+
+//   import { defineField, defineType } from "sanity";
+
+// export const landingSchema = defineType({
+//   name: "landing",
+//   title: "Landing",
+//   type: "document",
+//   fields: [
+//     defineField({
+//       name: "title",
+//       title: "Title",
+//       type: "string",
+//     }),
+//     defineField({
+//       name: "message",
+//       title: "Message",
+//       type: "text",
+//     }),
+//   ],
+// });
+// export const birthdayCardSchema = defineType({
+//   name: "birthdayCard",
+//   title: "Birthday Card",
+//   type: "document",
+//   fields: [
+//     defineField({
+//       name: "title",
+//       title: "Card Title",
+//       type: "string",
+//       validation: (Rule) => Rule.required(),
+//     }),
+//     defineField({
+//       name: "messages",
+//       title: "Messages",
+//       type: "array",
+//       of: [
+//         {
+//           type: "object",
+//           fields: [
+//             defineField({
+//               name: "text",
+//               title: "Message Text",
+//               type: "text",
+//             }),
+//             defineField({
+//               name: "style",
+//               title: "Text Style",
+//               type: "object",
+//               fields: [
+//                 { name: "font", title: "Font", type: "string" },
+//                 { name: "color", title: "Color", type: "string" },
+//                 { name: "size", title: "Size", type: "number" },
+//               ],
+//             }),
+//           ],
+//         },
+//       ],
+//     }),
+//     defineField({
+//       name: "images",
+//       title: "Images",
+//       type: "array",
+//       of: [
+//         {
+//           type: "image",
+//           fields: [
+//             defineField({
+//               name: "alt",
+//               title: "Alt Text",
+//               type: "string",
+//             }),
+//             defineField({
+//               name: "caption",
+//               title: "Caption",
+//               type: "string",
+//             }),
+//           ],
+//           options: { hotspot: true },
+//         },
+//       ],
+//     }),
+//     defineField({
+//       name: "background",
+//       title: "Background Image or Color",
+//       type: "string",
+//       description: "URL for image or hex code for color",
+//     }),
+//     defineField({
+//       name: "createdAt",
+//       title: "Created At",
+//       type: "datetime",
+//       readOnly: true,
+//     }),
+//   ],
+// });
+
+// export const loveLetterSchema = defineType({
+//   name: "loveLetter",
+//   title: "Love Letter",
+//   type: "document",
+//   fields: [
+//     defineField({
+//       name: "title",
+//       title: "Title",
+//       type: "string",
+//     }),
+//     defineField({
+//       name: "placeholder",
+//       title: "Placeholder",
+//       type: "text",
+//     }),
+//   ],
+// });
+

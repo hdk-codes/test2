@@ -2,6 +2,7 @@
   "include": ["client/src/**/*", "shared/**/*", "server/**/*", "client/src/lib/firebase.ts"],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,

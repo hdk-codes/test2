@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import * as THREE from 'three';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 
 interface ParallaxBackgroundProps {
   scrollProgress: number;
@@ -118,16 +118,16 @@ export default function ParallaxBackground({
     mountRef.current.appendChild(renderer.domElement);
 
     // Add ambient light and point lights with different colors
-    const ambientLight = new THREE.AmbientLight(0x404040, 1);
-    scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    scene.add(ambientLight as unknown as THREE.Object3D);
 
-    const pointLight1 = new THREE.PointLight(0xff6b8b, 1, 100);
+    const pointLight1 = new THREE.PointLight(0xffffff, 1.0, 100);
     pointLight1.position.set(5, 5, 5);
-    scene.add(pointLight1);
+    scene.add(pointLight1 as unknown as THREE.Object3D);
 
-    const pointLight2 = new THREE.PointLight(0x6b9fff, 1, 100);
+    const pointLight2 = new THREE.PointLight(0x6b9fff, 1.0, 100);
     pointLight2.position.set(-5, -5, 5);
-    scene.add(pointLight2);
+    scene.add(pointLight2 as unknown as THREE.Object3D);
 
     // Create particles
     const particleGeometry = new THREE.BufferGeometry();
@@ -153,63 +153,54 @@ export default function ParallaxBackground({
     particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
     
-    const particleMaterial = new THREE.PointsMaterial({
-      size: 0.05,
-      sizeAttenuation: true,
+    const particleMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
       transparent: true,
-      opacity: 0.8,
-      vertexColors: true,
-      blending: THREE.AdditiveBlending
+      opacity: 0.8
     });
     
     const particles = new THREE.Points(particleGeometry, particleMaterial);
+    particles.position.set(0, 0, 0);
+    particles.scale.set(1, 1, 1);
     scene.add(particles);
     
     // Position camera
     camera.position.z = 0.1;
     
     // Animation loop
-     const clock = new THREE.Clock();
+    const animate = () => {
+      const elapsedTime = performance.now() * 0.001; // Use performance.now() instead of Clock
+      
+      // Rotate particles
+      if (particles) {
+        const rotationX = elapsedTime * 0.05 + (beta || 0) * 0.01 + mouseEffect.y * 0.001;
+        const rotationY = elapsedTime * 0.03 + (gamma || 0) * 0.01 + mouseEffect.x * 0.001;
+        
+        particles.rotation.set(rotationX, rotationY, 0);
+        particles.scale.set(
+          1 + scrollProgress * 0.0,
+          1 + scrollProgress * 0.2,
+          1 + scrollProgress * 0.2
+        );
+      }
+      
+      // Update pointlights color based on active section
+      const colors = [
+        new THREE.Color(0xff6b8b), // Landing pink
+        new THREE.Color(0xffb86c), // Birthday card orange
+        new THREE.Color(0x6b9fff), // Love letter blue
+        new THREE.Color(0xff6bdb)  // Final purple
+      ];
+      
+      if (pointLight1 instanceof THREE.PointLight) {
+        pointLight1.color.copy(colors[activeSection]);
+      }
+      
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    };
     
-    // const animate = () => {
-    //   const elapsedTime = clock.getElapsedTime();
-      
-    //   // Rotate particles
-    //   particles.rotation.x = elapsedTime * 0.05;
-    //   particles.rotation.y = elapsedTime * 0.03;
-      
-    //   // Apply device orientation if available
-    //   if (gamma || beta) {
-    //     particles.rotation.x += beta * 0.01;
-    //     particles.rotation.y += gamma * 0.01;
-    //   }
-      
-    //   // Apply mouse effect
-    //   particles.rotation.x += mouseEffect.y * 0.001;
-    //   particles.rotation.y += mouseEffect.x * 0.001;
-      
-    //   // Apply section transition effect
-    //   particles.scale.set(
-    //     1 + scrollProgress * 0.0,
-    //     1 + scrollProgress * 0.2,
-    //     1 + scrollProgress * 0.2
-    //   );
-      
-    //   // Update pointlights color based on active section
-    //   const colors = [
-    //     new THREE.Color(0xff6b8b), // Landing pink
-    //     new THREE.Color(0xffb86c), // Birthday card orange
-    //     new THREE.Color(0x6b9fff), // Love letter blue
-    //     new THREE.Color(0xff6bdb)  // Final purple
-    //   ];
-      
-    //   pointLight1.color.lerp(colors[activeSection], 0.05);
-      
-    //   renderer.render(scene, camera);
-    //   requestAnimationFrame(animate);
-    // };
-    
-    // animate();
+    animate();
     
     // Handle resize
     const handleResize = () => {
@@ -247,6 +238,90 @@ export default function ParallaxBackground({
       z: depth + scrollProgress * 200
     };
   };
+
+  // Add enhanced particle system
+  const particleSystem = useMemo(() => {
+    return {
+      starField: Array(200).fill(0).map(() => ({
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 2 + 1,
+        speed: Math.random() * 0.5 + 0.2,
+        depth: Math.random() * 200 - 100,
+        opacity: Math.random() * 0.5 + 0.5,
+        color: `hsla(${Math.random() * 60 + 300}, 80%, 80%, 0.8)`
+      })),
+      hearts: Array(15).fill(0).map(() => ({
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 20 + 10,
+        rotation: Math.random() * 360,
+        speed: Math.random() * 1 + 0.5,
+        depth: Math.random() * 150 - 75,
+        color: `hsla(${Math.random() * 20 + 340}, 80%, 80%, 0.4)`
+      }))
+    };
+  }, []);
+
+  // Dynamic lighting system
+  const lightingSystem = {
+    ambientLight: new THREE.AmbientLight(0x404040, 0.5),
+    spotLight: new THREE.SpotLight(0xff6b8b, 1, 100, Math.PI / 4, 0.5, 1.0),
+    pointLights: [
+      new THREE.PointLight(0xff6b8b, 0.5, 100),
+      new THREE.PointLight(0x6b9fff, 0.5, 100),
+      new THREE.PointLight(0xffb6c1, 0.5, 100)
+    ]
+  };
+
+  useEffect(() => {
+    // Dynamic background color based on section
+    const bgColors = {
+      0: ['#1a0f2e', '#2a1f3e'],
+      1: ['#2e0f1a', '#3e1f2a'],
+      2: ['#0f1a2e', '#1f2a3e'],
+      3: ['#2e1a0f', '#3e2a1f']
+    };
+    
+    const colors = bgColors[activeSection as keyof typeof bgColors];
+    document.body.style.background = `linear-gradient(135deg, ${colors[0]} 0%, ${colors[1]} 100%)`;
+
+    return () => {
+      document.body.style.background = '';
+    };
+  }, [activeSection]);
+
+  // Enhanced render function
+  const renderParticles = useCallback(() => {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    // Use context instead of ctx
+    context.shadowBlur = 15;
+    context.shadowColor = 'rgba(255, 182, 193, 0.5)';
+    
+    particleSystem.hearts.forEach(heart => {
+      const x = heart.x + Math.sin(Date.now() * heart.speed * 0.001) * 20;
+      const y = heart.y + Math.cos(Date.now() * heart.speed * 0.001) * 20;
+      const scale = 1 + Math.sin(Date.now() * 0.002) * 0.2;
+      
+      context.save();
+      context.translate(x, y);
+      context.rotate(heart.rotation * Math.PI / 180);
+      context.scale(scale, scale);
+      
+      // Draw glowing heart
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.bezierCurveTo(-heart.size/2, -heart.size/2, -heart.size, 0, 0, heart.size);
+      context.bezierCurveTo(heart.size, 0, heart.size/2, -heart.size/2, 0, 0);
+      context.fillStyle = heart.color;
+      context.fill();
+      
+      context.restore();
+    });
+  }, [particleSystem]);
 
   return (
     <div

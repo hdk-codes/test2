@@ -1,12 +1,20 @@
 import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import LoveJourney from "./pages/LoveJourney";
 import Gallery from "@/pages/Gallery";
 import { motion } from "framer-motion";
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,
+      retry: 1
+    }
+  }
+});
 
 // Navigation component with beautiful animation effects
 function Navigation() {
@@ -20,6 +28,7 @@ function Navigation() {
       <div className="flex gap-4">
         <NavLink href="/">Home</NavLink>
         <NavLink href="/gallery">Gallery</NavLink>
+        <NavLink href="/LoveJourney">Love</NavLink>
     
       </div>
     </motion.nav>
@@ -53,6 +62,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/gallery" component={Gallery} />
+        <Route path="/LoveJourney" component={LoveJourney}/>
      
         {/* Fallback to 404 */}
         <Route component={NotFound} />

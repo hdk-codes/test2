@@ -10,23 +10,16 @@ import { firebaseConfig } from "@/lib/firebase"; // Adjust path if needed
 // Initialize Firebase app
 const app = initializeApp(firebaseConfig);
 
-// Register Firebase Service Worker for push notifications
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .register("/firebase-messaging-sw.js")
-    .then((registration) => {
-      console.log("Service Worker registered with scope:", registration.scope);
-      const messaging = getMessaging(app);
-      // Optional: Uncomment to test FCM token in dev
-      // import { getToken } from "firebase/messaging";
-      // getToken(messaging, { vapidKey: "your-vapid-key" }).then((token) =>
-      //   console.log("FCM Token:", token)
-      // );
-    })
-    .catch((error) => {
-      console.error("Service Worker registration failed:", error);
-    });
-}
+// Remove or comment out the service worker registration for now
+// const registerServiceWorker = async () => {
+//   try {
+//     await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+//   } catch (error) {
+//     console.error('Service Worker registration failed:', error);
+//   }
+// };
+
+// registerServiceWorker();
 
 // Render the app
 const rootElement = document.getElementById("root");

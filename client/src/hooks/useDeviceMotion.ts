@@ -1,26 +1,33 @@
 // src/hooks/useDeviceMotion.ts
 import { useState, useEffect } from 'react';
 
-interface DeviceMotion {
-  x: number | null;
-  y: number | null;
-  z: number | null;
+export interface DeviceMotion {
+  alpha: number | null;
+  beta: number | null;
+  gamma: number | null;
 }
 
-export function useDeviceMotion(): DeviceMotion {
-  const [motion, setMotion] = useState<DeviceMotion>({ x: null, y: null, z: null });
+export const useDeviceMotion = (): DeviceMotion => {
+  const [motion, setMotion] = useState<DeviceMotion>({
+    alpha: null,
+    beta: null,
+    gamma: null
+  });
 
   useEffect(() => {
-    const handleMotion = (e: DeviceMotionEvent) => {
+    const handleDeviceMotion = (event: DeviceOrientationEvent) => {
       setMotion({
-        x: e.accelerationIncludingGravity?.x ?? null,
-        y: e.accelerationIncludingGravity?.y ?? null,
-        z: e.accelerationIncludingGravity?.z ?? null,
+        alpha: event.alpha,
+        beta: event.beta,
+        gamma: event.gamma
       });
     };
-    window.addEventListener('devicemotion', handleMotion);
-    return () => window.removeEventListener('devicemotion', handleMotion);
+
+    window.addEventListener('deviceorientation', handleDeviceMotion);
+    return () => {
+      window.removeEventListener('deviceorientation', handleDeviceMotion);
+    };
   }, []);
 
   return motion;
-}
+};

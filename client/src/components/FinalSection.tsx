@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 
-interface Props {
+export interface FinalSectionProps {
+  isActive: boolean;
+  progress: number;
   onHeartBurst: () => void;
 }
 
-export default function FinalSection({ onHeartBurst }: Props) {
+export default function FinalSection({ isActive, progress, onHeartBurst }: FinalSectionProps) {
   return (
     <section className="flex flex-col items-center justify-center h-full text-white">
       <motion.h2

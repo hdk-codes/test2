@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDeviceOrientation } from '@/hooks/use-device-orientation';
-import {confetti} from 'canvas-confetti';
+import confetti from 'canvas-confetti';
 import { Parallax, ParallaxProvider } from 'react-scroll-parallax';
 import GalleryItemCard from '@/components/GalleryItemCard';
 import UploadForm from '@/components/UploadForm';

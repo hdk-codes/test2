@@ -2,18 +2,45 @@ import { createClient } from '@sanity/client';
 import imageUrlBuilder from '@sanity/image-url';
 import type { SanityClient } from '@sanity/client';
 import type { SanityImageSource } from '@sanity/image-url/lib/types/types';
+import { z } from 'zod';
+
+const configSchema = z.object({
+  projectId: z.string(),
+  dataset: z.string(),
+  apiVersion: z.string(),
+  useCdn: z.boolean(),
+});
+
 const config = {
-    apiVersion: '2021-03-25', // Use the latest API version
-    projectId: import.meta.env.VITE_SANITY_PROJECT_ID,
-    dataset: import.meta.env.VITE_SANITY_DATASET,
-    token: import.meta.env.VITE_SANITY_TOKEN, // Optional, for authenticated requests
-    useCdn: true, // Faster, cached responses
-}
-export const client: SanityClient = createClient(config);
+  projectId: import.meta.env.VITE_SANITY_PROJECT_ID || 'fallback-id',
+  dataset: import.meta.env.VITE_SANITY_DATASET || 'production',
+  apiVersion: '2023-05-03',
+  useCdn:false,
+  token: import.meta.env.VITE_SANITY_API_TOKEN,
+};
+
+// Temporary auth token management
+const TEMP_AUTH_KEY = 'skJhuNd6Fcl0iJJyBiSxn8jz0hwrPjVEjtVLIh6tkrfKrUZIr8N3tmdVDMXozepcOkKQ5BYpULt2ZIc7vxwjjS9Gduo3M2W8kBKGaUfYYY6AJlRfyFnTPZjgASvP4wgF9Km2UxThEFUHrzctsa3ubL8RbWfDXVZWsfeNwq61PguMj6wsH2py';
+
+export const getTempAuthToken = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TEMP_AUTH_KEY);
+};
+
+export const setTempAuthToken = (token: string) => {
+  localStorage.setItem(TEMP_AUTH_KEY, token);
+};
+
+export const client: SanityClient = createClient(configSchema.parse(config));
 
 export const { projectId, dataset } = config; // Export for use elsewhere
 
 const builder = imageUrlBuilder(client);
+
+export const urlForImage = (source: SanityImageSource) => {
+  if (!source) return null;
+  return builder.image(source).url();
+};
 
 export function urlFor(source: SanityImageSource): string {
   return builder.image(source).url();
